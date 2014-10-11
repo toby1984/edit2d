@@ -78,9 +78,9 @@ public class PointNode implements IGraphNode
 	@Override
 	public void setParent(IGraphNode parent)
 	{
-		if ( this.parent != null && this.parent != parent ) {
-			throw new IllegalStateException("Parent already set");
-		}
+//		if ( this.parent != null && this.parent != parent ) {
+//			throw new IllegalStateException("Parent already set");
+//		}
 		this.parent = parent;
 	}
 

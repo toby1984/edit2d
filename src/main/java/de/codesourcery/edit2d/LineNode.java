@@ -1,6 +1,8 @@
 package de.codesourcery.edit2d;
 
 import java.awt.Point;
+import java.util.Arrays;
+import java.util.HashSet;
 
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Vector2;
@@ -61,18 +63,17 @@ public class LineNode extends AbstractGraphNode
 		}
 
 		final Vector2 s = getMetaData().viewToModel( splitPoint );
-		final Vector2 p1 = ((PointNode) child(1)).p;
 
 		final PointNode newPoint1 = new PointNode( s );
 		final PointNode newPoint2 = new PointNode( s );
-		setChild( 1 , newPoint1 );
 
-		final LineNode newLine = new LineNode( newPoint2 , new PointNode(p1) );
+		final LineNode newLine = new LineNode( newPoint2 , (PointNode) child(1) );
 		newLine.getMetaData().setModelMatrix( getMetaData().getModelMatrix() );
 		newLine.update( getParent().getMetaData().getCombinedMatrix() );
 
-		Observer.link( EventType.TRANSLATE_POINT ,EventType.PARENT_MOVED, newPoint1 , newPoint2 );
+		Observer.link( new HashSet<>(Arrays.asList(EventType.TRANSLATE_POINT,EventType.TRANSLATE_LINE , EventType.PARENT_MOVED ) ) , newPoint1 , newPoint2 );
 
+		setChild( 1 , newPoint1 );
 		getParent().insertChild( getParent().indexOf( this )+1 , newLine );
 		return true;
 	}
