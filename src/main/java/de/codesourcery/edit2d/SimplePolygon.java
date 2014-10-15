@@ -4,6 +4,7 @@ import java.awt.Point;
 import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 import com.badlogic.gdx.math.Intersector;
@@ -26,10 +27,13 @@ public class SimplePolygon extends AbstractGraphNode
 		addChildren( l0,l1,l2, l3 );
 
 		// link start/end points of consecutive lines
-		Observer.link( asSet(EventType.TRANSLATE_POINT,EventType.TRANSLATE_LINE , EventType.PARENT_MOVED ) , l0.child( 1 ) , l1.child( 0 ) );
-		Observer.link( asSet(EventType.TRANSLATE_POINT,EventType.TRANSLATE_LINE , EventType.PARENT_MOVED ) , l1.child( 1 ) , l2.child( 0 ) );
-		Observer.link( asSet(EventType.TRANSLATE_POINT,EventType.TRANSLATE_LINE , EventType.PARENT_MOVED ) , l2.child( 1 ) , l3.child( 0 ) );
-		Observer.link( asSet(EventType.TRANSLATE_POINT,EventType.TRANSLATE_LINE , EventType.PARENT_MOVED ) , l3.child( 1 ) , l0.child( 0 ) );
+		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l0.child( 1 ) , l1.child( 0 ) );
+		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l1.child( 1 ) , l2.child( 0 ) );
+		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l2.child( 1 ) , l3.child( 0 ) );
+		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l3.child( 1 ) , l0.child( 0 ) );
+	}
+
+	public SimplePolygon() {
 	}
 
 	private static Set<EventType> asSet(EventType t1,EventType...eventTypes)
@@ -42,7 +46,8 @@ public class SimplePolygon extends AbstractGraphNode
 		return result;
 	}
 
-	protected Rectangle2D.Float bounds() {
+	@Override
+	public Rectangle2D.Float getBounds() {
 
 		float xmin =  10000000;
 		float xmax = -10000000;
@@ -64,7 +69,7 @@ public class SimplePolygon extends AbstractGraphNode
 	}
 
 	protected Vector2 center() {
-		final Rectangle2D.Float b = bounds();
+		final Rectangle2D.Float b = getBounds();
 		return new Vector2( b.x + b.width/2 , b.y + b.height/2 );
 	}
 
@@ -77,7 +82,7 @@ public class SimplePolygon extends AbstractGraphNode
 	@Override
 	public boolean contains(int x, int y)
 	{
-		final Rectangle2D.Float rect = bounds();
+		final Rectangle2D.Float rect = getBounds();
 		if ( rect.contains( x, y ) )
 		{
 			// cast ray along positive X axis
@@ -135,5 +140,77 @@ public class SimplePolygon extends AbstractGraphNode
 	{
 		final Vector2 result = new Vector2();
 		return Intersector.intersectSegments( line.p0() , line.p1() , p0 , p1 , result );
+	}
+
+	public void removePoint(PointNode pointToRemove)
+	{
+		// find line
+		LineNode affectedLine = null;
+		for ( final IGraphNode child : children )
+		{
+			if ( child.indexOf( pointToRemove ) != -1 ) {
+				affectedLine = (LineNode) child;
+				break;
+			}
+		}
+		if ( affectedLine == null ) {
+			throw new NoSuchElementException("No line of this polygon contains "+pointToRemove);
+		}
+
+		final int pointIdx = affectedLine.indexOf( pointToRemove );
+		if ( pointIdx < 0 || pointIdx > 1) {
+			throw new IllegalStateException("Point has invalid point index "+pointIdx);
+		}
+
+		final int remainingIdx = 1 - pointIdx;
+		final PointNode remainingPoint = (PointNode) affectedLine.child(remainingIdx);
+		final Vector2 viewCoordinates = remainingPoint.getPointInViewCoordinates();
+		pointToRemove.set( (int) viewCoordinates.x , (int) viewCoordinates.y );
+
+		if ( pointIdx == 0 ) {
+			predecessor( affectedLine ).child(1).set( (int) viewCoordinates.x , (int) viewCoordinates.y );
+		} else {
+			successor( affectedLine ).child(0).set( (int) viewCoordinates.x , (int) viewCoordinates.y );
+		}
+
+		if ( affectedLine.length() < 1.0 ) {
+			System.out.println("Line too short, removing "+affectedLine);
+			removeLine( affectedLine );
+		}
+	}
+
+	public void removeLine(LineNode lineToRemove) {
+
+		if ( getChildCount() <= 3 ) {
+			throw new UnsupportedOperationException("Refusing to remove line from polygon with only "+getChildCount()+" lines");
+		}
+
+		final LineNode predecessor = predecessor( lineToRemove );
+		final LineNode successor = successor( lineToRemove );
+
+		// TODO: The following code relies on the fact that lines in a polygon are always
+		// TODO: linked in a clock-wise fashion
+
+		Observers.unlink( lineToRemove );
+
+		Observers.link( new HashSet<>( Arrays.asList( EventType.values() ) ) , predecessor.child(1), successor.child(0) );
+
+		lineToRemove.remove();
+	}
+
+	private LineNode successor(LineNode n) {
+		final int idx = indexOf( n );
+		if ( idx < (getChildCount()-1) ) {
+			return (LineNode) child( idx + 1);
+		}
+		return (LineNode) child( 0 );
+	}
+
+	private LineNode predecessor(LineNode n) {
+		final int idx = indexOf( n );
+		if ( idx == 0 ) {
+			return (LineNode) child( getChildCount()-1 );
+		}
+		return (LineNode) child( idx - 1 );
 	}
 }

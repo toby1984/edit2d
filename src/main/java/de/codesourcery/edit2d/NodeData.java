@@ -24,7 +24,8 @@ public class NodeData extends LightweightNodeData {
 	public Vector2 viewToModel(Vector2 v)
 	{
 		// TODO: Always calculating the inverse here might become too slow... maybe do this in updateCombinedMatrix() instead
-		return v.mul( getCombinedMatrix().inv() );
+		final Matrix3 inv = new Matrix3( getCombinedMatrix() ).inv();
+		return new Vector2(v).mul( inv );
 	}
 
 	@Override

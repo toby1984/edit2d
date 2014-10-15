@@ -47,6 +47,14 @@ public class LightweightNodeData implements INodeData {
 		flags = flag.set( flags );
 	}
 
+	@Override
+	public final void set(float x,float y) {
+		final Vector2 delta = viewToModel( new Vector2(0,0) );
+		final float dx = x - delta.x;
+		final float dy = y - delta.y;
+		translate(dx,dy);
+	}
+
 	protected final void clearFlag(Flag flag)
 	{
 		flags = flag.clear( flags );

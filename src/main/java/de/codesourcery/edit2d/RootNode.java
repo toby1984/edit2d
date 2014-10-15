@@ -1,5 +1,6 @@
 package de.codesourcery.edit2d;
 
+import java.awt.geom.Rectangle2D;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
@@ -84,5 +85,19 @@ public class RootNode extends AbstractGraphNode
 	@Override
 	public boolean contains(int x, int y) {
 		return false;
+	}
+
+	@Override
+	public java.awt.geom.Rectangle2D.Float getBounds()
+	{
+		Rectangle2D.Float result = null;
+		for ( final IGraphNode child : getChildren() ) {
+			if ( result == null ) {
+				result = child.getBounds();
+			} else {
+				result.add( child.getBounds() );
+			}
+		}
+		return result == null ? new Rectangle2D.Float() : result ;
 	}
 }

@@ -1,5 +1,6 @@
 package de.codesourcery.edit2d;
 
+import java.awt.geom.Rectangle2D;
 import java.util.List;
 
 import com.badlogic.gdx.math.Matrix3;
@@ -31,9 +32,19 @@ public interface IGraphNode
 
 	public void setChild(int index,IGraphNode n);
 
+	public int getChildCount();
+
+	public boolean hasChildren();
+
+	public boolean hasNoChildren();
+
+	public void removeChild(IGraphNode child);
+
+	public void remove();
+
 	public int indexOf(IGraphNode child);
 
-	public RootNode getRoot();
+	public IGraphNode getRoot();
 
 	public List<INodeObserver> getObservers();
 
@@ -47,9 +58,13 @@ public interface IGraphNode
 
 	public void translate(EventType eventType,int dx, int dy);
 
+	public void set(int x,int y);
+
 	public boolean contains(int x,int y);
 
 	public INodeData getMetaData();
 
 	public void update(Matrix3 matrix);
+
+	public Rectangle2D.Float getBounds();
 }

@@ -7,6 +7,8 @@ public interface INodeData {
 
 	public void translate(float dx, float dy);
 
+	public void set(float x,float y);
+
 	public boolean isDirty();
 
 	public void markDirty();

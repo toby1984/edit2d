@@ -34,14 +34,25 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	}
 
 	@Override
-	public List<INodeObserver> getObservers() {
+	public final void remove() {
+		getParent().removeChild( this );
+	}
+
+	@Override
+	public final void removeChild(IGraphNode child) {
+		children.remove( child );
+		child.setParent(null);
+	}
+
+	@Override
+	public final List<INodeObserver> getObservers() {
 		return observers;
 	}
 
 	@Override
-	public RootNode getRoot()
+	public final IGraphNode getRoot()
 	{
-		return (RootNode) (getParent() == null ? this : getParent().getRoot());
+		return getParent() == null ? this : getParent().getRoot();
 	}
 
 	@Override
@@ -50,7 +61,7 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	}
 
 	@Override
-	public void addObserver(INodeObserver o) {
+	public final void addObserver(INodeObserver o) {
 		this.observers.add(o);
 	}
 
@@ -69,8 +80,10 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	}
 
 	@Override
-	public final void visitPostOrder(INodeVisitor v) {
-		children.forEach( node -> node.visitPostOrder(v) );
+	public final void visitPostOrder(INodeVisitor v)
+	{
+		final List<IGraphNode> copy = new ArrayList<>(this.children);
+		copy.forEach( node -> node.visitPostOrder(v) );
 		v.visit(this);
 	}
 
@@ -81,7 +94,7 @@ public abstract class AbstractGraphNode implements IGraphNode {
 
 	@Override
 	public final void setParent(IGraphNode parent) {
-		if ( this.parent != null && this.parent != parent ) {
+		if ( this.parent != null && parent != null && this.parent != parent ) {
 			throw new IllegalStateException("Parent already set on "+this);
 		}
 		this.parent = parent;
@@ -90,9 +103,13 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	@Override
 	public final void translate(EventType eventType, int dx, int dy)
 	{
-		if ( getRoot().queueUpdate( eventType , this , dx , dy ) ) {
+		if ( ((RootNode) getRoot()).queueUpdate( eventType , this , dx , dy ) ) {
 			metaData.translate( dx ,  dy );
 		}
+	}
+
+	@Override
+	public void set(int x, int y) {
 	}
 
 	@Override
@@ -152,5 +169,20 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	@Override
 	public final List<IGraphNode> getChildren() {
 		return children;
+	}
+
+	@Override
+	public final int getChildCount() {
+		return children.size();
+	}
+
+	@Override
+	public final boolean hasChildren() {
+		return ! children.isEmpty();
+	}
+
+	@Override
+	public final boolean hasNoChildren() {
+		return children.isEmpty();
 	}
 }

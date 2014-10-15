@@ -1,11 +1,16 @@
 package de.codesourcery.edit2d;
 
 import java.awt.Color;
+import java.awt.Cursor;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.swing.JPanel;
 
@@ -21,24 +26,79 @@ public class EditorPanel extends JPanel {
 
 	protected static final int SELECTION_RADIUS = 10;
 
+	protected final List<ISceneObserver> sceneObservers = new ArrayList<>();
+
+	protected final HighlightManager highlightManager = new HighlightManager();
+
 	public static enum EditMode {
 		MOVE,DRAW,CREATE_POINTS;
 	}
 
-	private EditMode editMode = EditMode.MOVE;
+	private EditMode currentEditingMode = EditMode.MOVE;
 
 	protected Vector2 pointOnLine = null;
+
+	protected EditMode editModeOverride = null;
+
+	private final KeyAdapter keyListener = new KeyAdapter() {
+
+		@Override
+		public void keyPressed(java.awt.event.KeyEvent e)
+		{
+			if ( e.getKeyCode() == KeyEvent.VK_SPACE )
+			{
+				if ( editModeOverride != EditMode.MOVE)
+				{
+					setCursor( Cursor.getPredefinedCursor(Cursor.HAND_CURSOR ) );
+					editModeOverride = EditMode.MOVE;
+				}
+			}
+		}
+
+		@Override
+		public void keyReleased(java.awt.event.KeyEvent e)
+		{
+			switch( e.getKeyCode() )
+			{
+				case KeyEvent.VK_DELETE:
+					synchronized( root )
+					{
+						if ( NodeUtils.deleteNodes( highlightManager.getHighlighted() ) )
+						{
+							highlightManager.clearHighlights();
+							repaint();
+						}
+					}
+					break;
+				case KeyEvent.VK_SPACE:
+					if ( editModeOverride == EditMode.MOVE) {
+						setCursor( Cursor.getDefaultCursor() );
+						editModeOverride = null;
+					}
+					break;
+				default:
+					// $$FALL-THROUGH$$
+			}
+		}
+
+	};
+
+	protected EditMode getEditMode() {
+		if ( editModeOverride != null ) {
+			return editModeOverride;
+		}
+		return currentEditingMode;
+	}
 
 	private final MouseAdapter mouseListener = new MouseAdapter()
 	{
 		private final Point lastPos = new Point();
 		private IGraphNode dragged = null;
-		private final HighlightManager highlighted = new HighlightManager();
 
 		@Override
 		public void mousePressed(MouseEvent e)
 		{
-			if ( editMode == EditMode.MOVE )
+			if ( getEditMode() == EditMode.MOVE )
 			{
 				if ( dragged == null && e.getButton() == MouseEvent.BUTTON1 )
 				{
@@ -62,13 +122,17 @@ public class EditorPanel extends JPanel {
 		@Override
 		public void mouseClicked(MouseEvent e)
 		{
-			if ( editMode == EditMode.CREATE_POINTS && e.getButton() == MouseEvent.BUTTON1 )
+			if ( getEditMode() == EditMode.CREATE_POINTS && e.getButton() == MouseEvent.BUTTON1 )
 			{
-				final IGraphNode candidate = NodeUtils.findClosestNode( root,e.getX(), e.getY() , SELECTION_RADIUS );
-				if ( candidate instanceof LineNode)
+				synchronized(root)
 				{
-					if ( ((LineNode) candidate).split( e.getX() , e.getY() ) ) {
-						repaint();
+					final IGraphNode candidate = NodeUtils.findClosestNode( root,e.getX(), e.getY() , SELECTION_RADIUS );
+					if ( candidate instanceof LineNode)
+					{
+						if ( ((LineNode) candidate).split( e.getX() , e.getY() ) ) {
+							subtreeStructureChanged( candidate.getParent() );
+							repaint();
+						}
 					}
 				}
 			}
@@ -77,7 +141,7 @@ public class EditorPanel extends JPanel {
 		@Override
 		public void mouseReleased(MouseEvent e)
 		{
-			if ( editMode == EditMode.MOVE )
+			if ( getEditMode() == EditMode.MOVE )
 			{
 				if ( dragged != null && e.getButton() == MouseEvent.BUTTON1 )
 				{
@@ -89,52 +153,46 @@ public class EditorPanel extends JPanel {
 		@Override
 		public void mouseMoved(MouseEvent e)
 		{
-			IGraphNode candidate = NodeUtils.findClosestNode( root,e.getX(), e.getY() , 15 );
-			if ( candidate == null ) {
-				candidate = NodeUtils.findContainingNode( root , e.getX() , e.getY() );
-			}
-
-			if ( candidate != null )
+			synchronized(root)
 			{
-				if ( highlighted.setHighlight( candidate ) ) {
+				IGraphNode candidate = NodeUtils.findClosestNode( root,e.getX(), e.getY() , 15 );
+				if ( candidate == null ) {
+					candidate = NodeUtils.findContainingNode( root , e.getX() , e.getY() );
+				}
+
+				if ( candidate != null )
+				{
+					if ( highlightManager.setHighlight( candidate ) ) {
+						repaint();
+					}
+				}
+				else if ( highlightManager.clearHighlights() ) {
 					repaint();
 				}
-			}
-			else if ( highlighted.clearHighlights() ) {
-				repaint();
-			}
 
-			if ( editMode == EditMode.CREATE_POINTS && candidate instanceof LineNode ) {
-				pointOnLine = ((LineNode) candidate).getClosestPointOnLine( e.getX() ,  e.getY() );
-				repaint();
-			} else {
-				pointOnLine = null;
+				if ( getEditMode() == EditMode.CREATE_POINTS && candidate instanceof LineNode ) {
+					pointOnLine = ((LineNode) candidate).getClosestPointOnLine( e.getX() ,  e.getY() );
+					repaint();
+				} else {
+					pointOnLine = null;
+				}
 			}
 		}
 
 		@Override
 		public void mouseDragged(MouseEvent e)
 		{
-			if ( editMode == EditMode.MOVE )
+			if ( getEditMode() == EditMode.MOVE )
 			{
 				if ( dragged != null )
 				{
 					final int dx = e.getX() - lastPos.x;
 					final int dy = e.getY() - lastPos.y;
 
+
 					synchronized( root )
 					{
-						EventType t;
-						if ( dragged instanceof PointNode) {
-							t = EventType.TRANSLATE_POINT;
-						} else if ( dragged instanceof LineNode) {
-							t = EventType.TRANSLATE_LINE;
-						} else if ( dragged instanceof SimplePolygon) {
-							t = EventType.TRANSLATE_POLY;
-						} else {
-							throw new RuntimeException("Unhandled graph node: "+dragged);
-						}
-
+						final EventType t = EventType.TRANSLATED;
 						if ( dragged instanceof LineNode )
 						{
 							final LineNode l = (LineNode) dragged;
@@ -152,20 +210,37 @@ public class EditorPanel extends JPanel {
 						}
 					}
 					lastPos.setLocation( e.getPoint() );
+					subtreeValuesChanged(dragged);
 					repaint();
 				}
 			}
 		}
 	};
 
+	protected void subtreeStructureChanged(IGraphNode changedNode) {
+		sceneObservers.forEach( o -> o.subtreeStructureChanged( changedNode ) );
+	}
+
+	protected void subtreeValuesChanged(IGraphNode changedNode) {
+		sceneObservers.forEach( o -> o.subtreeValuesChanged( changedNode ) );
+	}
+
 	public EditorPanel()
 	{
 		addMouseListener( mouseListener );
 		addMouseMotionListener( mouseListener );
+		addKeyListener( keyListener );
+		setFocusable(true);
+		requestFocus();
+		setRequestFocusEnabled(true);
 	}
 
 	public IGraphNode getRoot() {
 		return root;
+	}
+
+	public void addSceneObserver(ISceneObserver o) {
+		this.sceneObservers.add(o);
 	}
 
 	public void setEditMode(EditMode editMode)
@@ -173,7 +248,8 @@ public class EditorPanel extends JPanel {
 		if (editMode == null) {
 			throw new IllegalArgumentException("editMode must not be NULL");
 		}
-		this.editMode = editMode;
+		this.editModeOverride = null;
+		this.currentEditingMode = editMode;
 		repaint();
 	}
 
@@ -220,7 +296,7 @@ public class EditorPanel extends JPanel {
 		}
 		else if ( t instanceof PointNode  )
 		{
-			if ( t.getMetaData().isHighlighted() || editMode == EditMode.CREATE_POINTS )
+			if ( t.getMetaData().isHighlighted() || getEditMode() == EditMode.CREATE_POINTS )
 			{
 				final Vector2 p = ((PointNode) t).getPointInViewCoordinates();
 				if ( t.getMetaData().isHighlighted() ) {

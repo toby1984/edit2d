@@ -1,6 +1,8 @@
 package de.codesourcery.edit2d;
 
 import java.awt.Point;
+import java.awt.geom.Rectangle2D;
+import java.awt.geom.Rectangle2D.Float;
 import java.util.Arrays;
 import java.util.HashSet;
 
@@ -27,9 +29,22 @@ public class LineNode extends AbstractGraphNode
 		return ((PointNode) children.get(1)).getPointInViewCoordinates();
 	}
 
+	public float length() {
+		return p0().dst(p1());
+	}
+
 	@Override
 	public String toString() {
-		return "LineNode "+p0()+" -> "+p1();
+		switch ( getChildCount() ) {
+			case 2:
+				return "LineNode "+p0()+" -> "+p1();
+			case 1:
+				return "LineNode "+p0()+" -> <not set>";
+			case 0:
+				return "LineNode <no points>";
+			default:
+				throw new IllegalStateException("Line with "+getChildCount()+" children?");
+		}
 	}
 
 	public Vector2 getClosestPointOnLine(int x,int y)
@@ -57,23 +72,25 @@ public class LineNode extends AbstractGraphNode
 
 	public boolean split(int x,int y) {
 
-		final Vector2 splitPoint = getClosestPointOnLine(x,y);
-		if ( splitPoint.equals( p0() ) || splitPoint.equals( p1() ) ) {
+		final Vector2 sp = getClosestPointOnLine(x,y);
+		if ( sp.equals( p0() ) || sp.equals( p1() ) ) {
 			return false;
 		}
 
-		final Vector2 s = getMetaData().viewToModel( splitPoint );
+		final Vector2 s = getMetaData().viewToModel( sp );
 
-		final PointNode newPoint1 = new PointNode( s );
-		final PointNode newPoint2 = new PointNode( s );
+		final PointNode splitPoint1 = new PointNode( s );
+		final PointNode splitPoint2 = new PointNode( s );
+		Observers.link( new HashSet<>(Arrays.asList( EventType.values() ) ) , splitPoint1 , splitPoint2 );
 
-		final LineNode newLine = new LineNode( newPoint2 , (PointNode) child(1) );
+		final PointNode end = (PointNode) child(1);
+		setChild( 1 , splitPoint1 );
+
+		final LineNode newLine = new LineNode( splitPoint2 , end  );
+
 		newLine.getMetaData().setModelMatrix( getMetaData().getModelMatrix() );
 		newLine.update( getParent().getMetaData().getCombinedMatrix() );
 
-		Observer.link( new HashSet<>(Arrays.asList(EventType.TRANSLATE_POINT,EventType.TRANSLATE_LINE , EventType.PARENT_MOVED ) ) , newPoint1 , newPoint2 );
-
-		setChild( 1 , newPoint1 );
 		getParent().insertChild( getParent().indexOf( this )+1 , newLine );
 		return true;
 	}
@@ -89,6 +106,18 @@ public class LineNode extends AbstractGraphNode
 	@Override
 	public float distanceTo(int x, int y) {
 		return Intersector.distanceSegmentPoint(p0(), p1(), new Vector2(x,y) );
+	}
+
+	@Override
+	public Float getBounds() {
+		final Vector2 p0 = p0();
+		final Vector2 p1 = p1();
+
+		final float xmin = Math.min(p0.x,p1.x);
+		final float xmax = Math.max(p0.x,p1.x);
+		final float ymin = Math.min(p0.y,p1.y);
+		final float ymax = Math.max(p0.y,p1.y);
+		return new Rectangle2D.Float(xmin,ymin,xmax-xmin,ymax-ymin);
 	}
 
 	@Override

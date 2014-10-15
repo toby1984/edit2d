@@ -6,6 +6,7 @@ import java.awt.GridBagLayout;
 
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JSplitPane;
 
 import com.badlogic.gdx.math.Matrix3;
 
@@ -45,6 +46,11 @@ public class Main extends JFrame {
 		cnstrs.weightx = 1;
 		cnstrs.weighty = 0.1;
 
+		final SceneGraphDebugPanel debugPanel = new SceneGraphDebugPanel( p.getRoot() );
+		p.addSceneObserver( debugPanel );
+
+		final JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, p , debugPanel );
+
 		final JComboBox<EditorPanel.EditMode> editMode = new JComboBox<>( EditMode.values() );
 		editMode.setSelectedItem( EditMode.MOVE );
 		editMode.addActionListener( event -> p.setEditMode( (EditMode) editMode.getSelectedItem() ) );
@@ -59,7 +65,7 @@ public class Main extends JFrame {
 		cnstrs.gridy = 1;
 		cnstrs.weightx = 1;
 		cnstrs.weighty = 0.9;
-		getContentPane().add( p ,cnstrs );
+		getContentPane().add( splitPane ,cnstrs );
 
 		pack();
 		setVisible(true);

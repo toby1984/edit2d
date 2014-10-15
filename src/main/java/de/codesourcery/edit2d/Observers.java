@@ -3,9 +3,10 @@ package de.codesourcery.edit2d;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
-public class Observer {
+public class Observers {
 
 	public static void link(Set<EventType> categories,IGraphNode n1,IGraphNode n2,IGraphNode... additional)
 	{
@@ -43,6 +44,29 @@ public class Observer {
 			result.addAll(Arrays.asList(additional));
 		}
 		return result;
+	}
+
+	public static void unlink(IGraphNode toUnlink)
+	{
+		toUnlink.getRoot().visitPostOrder( node -> {
+
+			final List<INodeObserver> observers = node.getObservers();
+			for (int i = 0; i < observers.size(); i++)
+			{
+				final INodeObserver o = observers.get(i);
+				if ( o instanceof LinkConstraint )
+				{
+					final List<IGraphNode> nodes = ((LinkConstraint) o).getLinkedNodes();
+					if ( nodes.size() == 2 ) {
+						if ( nodes.stream().anyMatch( x -> x == toUnlink ) )
+						{
+							observers.remove(i);
+							i--;
+						}
+					}
+				}
+			}
+		});
 	}
 
 	public static void linkX(EventType type,IGraphNode n1,IGraphNode n2,IGraphNode... additional)

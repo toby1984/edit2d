@@ -1,5 +1,8 @@
 package de.codesourcery.edit2d;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class NodeUtils {
 
 	public static IGraphNode findClosestNode(IGraphNode node,int x, int y, float minimumDistance)
@@ -72,5 +75,49 @@ public class NodeUtils {
 			current = current.getParent();
 		}
 		return false;
+	}
+
+	public static boolean deleteNodes(List<IGraphNode> toDelete) {
+
+		if ( toDelete.isEmpty() ) {
+			return false;
+		}
+
+		final List<IGraphNode> toRemove = new ArrayList<>( toDelete );
+		while ( ! toRemove.isEmpty() )
+		{
+			System.out.println("Deleting "+toDelete);
+
+			final IGraphNode node = toRemove.remove(0);
+
+			if ( node instanceof PointNode) // point removed
+			{
+				// point removed from line that is part of a polygon
+				if ( node.getParent() instanceof LineNode && node.getParent().getParent() instanceof SimplePolygon )
+				{
+					final PointNode pn = (PointNode) node;
+					((SimplePolygon) node.getParent().getParent()).removePoint( pn );
+				}
+			}
+			else if ( node instanceof LineNode && node.getParent() instanceof SimplePolygon ) // line removed from polygon
+			{
+				if ( node.getParent().getChildCount() < 3 ) {
+					toRemove.add( node.getParent() );
+				} else {
+					((SimplePolygon) node.getParent()).removeLine( (LineNode) node );
+				}
+			}
+			else
+			{
+				Observers.unlink( node );
+				node.remove();
+
+				if ( node.getParent().hasNoChildren() && !( node.getParent() instanceof RootNode) )
+				{
+					toRemove.add( node.getParent() );
+				}
+			}
+		}
+		return true;
 	}
 }

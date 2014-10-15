@@ -26,6 +26,10 @@ public class HighlightManager {
 		return true;
 	}
 
+	public List<IGraphNode> getHighlighted() {
+		return highlighted;
+	}
+
 	public boolean clearHighlights()
 	{
 		if ( ! highlighted.isEmpty() )

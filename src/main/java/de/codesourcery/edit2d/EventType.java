@@ -1,8 +1,6 @@
 package de.codesourcery.edit2d;
 
 public enum EventType {
-	TRANSLATE_POINT,
-	TRANSLATE_LINE,
-	TRANSLATE_POLY,
+	TRANSLATED,
 	PARENT_MOVED;
 }

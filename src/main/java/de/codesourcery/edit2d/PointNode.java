@@ -1,6 +1,7 @@
 package de.codesourcery.edit2d;
 
 import java.awt.Point;
+import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -78,9 +79,6 @@ public class PointNode implements IGraphNode
 	@Override
 	public void setParent(IGraphNode parent)
 	{
-//		if ( this.parent != null && this.parent != parent ) {
-//			throw new IllegalStateException("Parent already set");
-//		}
 		this.parent = parent;
 	}
 
@@ -90,8 +88,8 @@ public class PointNode implements IGraphNode
 	}
 
 	@Override
-	public RootNode getRoot() {
-		return getParent() == null ? null : getParent().getRoot();
+	public IGraphNode getRoot() {
+		return getParent() == null ? this : getParent().getRoot();
 	}
 
 	@Override
@@ -117,11 +115,20 @@ public class PointNode implements IGraphNode
 	@Override
 	public void translate(EventType eventType, int dx, int dy)
 	{
-		if ( getRoot().queueUpdate( eventType , this , dx , dy ) )
+		if ( ((RootNode) getRoot()).queueUpdate( eventType , this , dx , dy ) )
 		{
 			this.p.x += dx;
 			this.p.y += dy;
 		}
+	}
+
+
+	@Override
+	public void set(int x, int y)
+	{
+		final int dx = (int) (x - this.p.x);
+		final int dy = (int) (y - this.p.y);
+		this.translate(EventType.TRANSLATED,dx,dy);
 	}
 
 	@Override
@@ -158,5 +165,36 @@ public class PointNode implements IGraphNode
 				i--;
 			}
 		}
+	}
+
+	@Override
+	public Rectangle2D.Float getBounds() {
+		final Vector2 p = getPointInViewCoordinates();
+		return new Rectangle2D.Float( p.x , p.y , 1 , 1 );
+	}
+
+	@Override
+	public void removeChild(IGraphNode child) {
+		throw new UnsupportedOperationException("removeChild() not supported by points");
+	}
+
+	@Override
+	public void remove() {
+		getParent().removeChild( this );
+	}
+
+	@Override
+	public int getChildCount() {
+		return 0;
+	}
+
+	@Override
+	public boolean hasChildren() {
+		return false;
+	}
+
+	@Override
+	public boolean hasNoChildren() {
+		return true;
 	}
 }
