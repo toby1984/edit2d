@@ -27,7 +27,7 @@ public class HighlightManager {
 	}
 
 	public List<IGraphNode> getHighlighted() {
-		return highlighted;
+		return new ArrayList<>( highlighted );
 	}
 
 	public boolean clearHighlights()

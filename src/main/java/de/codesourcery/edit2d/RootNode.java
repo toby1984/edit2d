@@ -32,12 +32,16 @@ public class RootNode extends AbstractGraphNode
 	public boolean queueUpdate(EventType type,IGraphNode n,int dx,int dy)
 	{
 		final boolean queued = internalUpdate( type , n , dx , dy );
+
 		if ( queued )
 		{
+			System.out.println("QUEUED: "+type+" ("+dx+","+dy+") @ "+n);
 			for ( final IGraphNode child : n.getChildren() )
 			{
 				queueUpdate( EventType.PARENT_MOVED , child , dx , dy );
 			}
+		} else {
+			System.out.println("NOT QUEUED: "+type+" ("+dx+","+dy+") @ "+n);
 		}
 		return queued;
 	}
@@ -75,6 +79,11 @@ public class RootNode extends AbstractGraphNode
 			key.getObservers().stream().filter( ob -> ob.invokeFor( value.type ) ).forEach( observer -> observer.nodeTranslated( value.type , finalKey ,  value.dx , value.dy ) );
 		} while ( true );
 		nodeUpdates.clear();
+	}
+
+	@Override
+	public String toString() {
+		return "RootNode #"+nodeId;
 	}
 
 	@Override

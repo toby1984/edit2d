@@ -12,6 +12,8 @@ public abstract class AbstractGraphNode implements IGraphNode {
 
 	protected final NodeData metaData = new NodeData();
 
+	protected final long nodeId = NODE_ID.incrementAndGet();
+
 	private IGraphNode parent;
 
 	@Override
@@ -109,7 +111,8 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	}
 
 	@Override
-	public void set(int x, int y) {
+	public void set(int x, int y,boolean notifyObservers) {
+		throw new RuntimeException("Unsupported operation set(int,int,boolean)");
 	}
 
 	@Override

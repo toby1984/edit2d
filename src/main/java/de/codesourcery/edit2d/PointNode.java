@@ -19,6 +19,8 @@ public class PointNode implements IGraphNode
 
 	private IGraphNode parent;
 
+	private final long nodeId = NODE_ID.incrementAndGet();
+
 	public PointNode(Point p) {
 		this(p.x,p.y);
 	}
@@ -33,7 +35,7 @@ public class PointNode implements IGraphNode
 
 	@Override
 	public String toString() {
-		return "Point "+p+" ( "+getMetaData()+")";
+		return "Point #"+nodeId+" "+p+" ( "+getMetaData()+")";
 	}
 
 	@Override
@@ -115,7 +117,11 @@ public class PointNode implements IGraphNode
 	@Override
 	public void translate(EventType eventType, int dx, int dy)
 	{
-		if ( ((RootNode) getRoot()).queueUpdate( eventType , this , dx , dy ) )
+		final IGraphNode root = getRoot();
+		if ( ! (root instanceof RootNode)) {
+			throw new RuntimeException("getRoot() of "+this+" did return "+root);
+		}
+		if ( ((RootNode) root).queueUpdate( eventType , this , dx , dy ) )
 		{
 			this.p.x += dx;
 			this.p.y += dy;
@@ -124,11 +130,19 @@ public class PointNode implements IGraphNode
 
 
 	@Override
-	public void set(int x, int y)
+	public void set(int x, int y,boolean notifyObservers)
 	{
-		final int dx = (int) (x - this.p.x);
-		final int dy = (int) (y - this.p.y);
-		this.translate(EventType.TRANSLATED,dx,dy);
+		final Vector2 pv = getPointInViewCoordinates();
+
+		final int dx = (int) (x - pv.x);
+		final int dy = (int) (y - pv.y);
+
+		if ( notifyObservers ) {
+			this.translate(EventType.TRANSLATED,dx,dy);
+		} else {
+			this.p.x += dx;
+			this.p.y += dy;
+		}
 	}
 
 	@Override

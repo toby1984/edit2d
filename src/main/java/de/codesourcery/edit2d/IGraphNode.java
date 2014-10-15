@@ -2,11 +2,14 @@ package de.codesourcery.edit2d;
 
 import java.awt.geom.Rectangle2D;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import com.badlogic.gdx.math.Matrix3;
 
 public interface IGraphNode
 {
+	public static final AtomicLong NODE_ID = new AtomicLong(0);
+
 	public interface INodeVisitor
 	{
 		public void visit(IGraphNode n);
@@ -58,7 +61,7 @@ public interface IGraphNode
 
 	public void translate(EventType eventType,int dx, int dy);
 
-	public void set(int x,int y);
+	public void set(int x,int y , boolean notifyObservers);
 
 	public boolean contains(int x,int y);
 

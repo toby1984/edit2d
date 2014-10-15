@@ -37,11 +37,11 @@ public class LineNode extends AbstractGraphNode
 	public String toString() {
 		switch ( getChildCount() ) {
 			case 2:
-				return "LineNode "+p0()+" -> "+p1();
+				return "LineNode #"+nodeId+" "+p0()+" -> "+p1();
 			case 1:
-				return "LineNode "+p0()+" -> <not set>";
+				return "LineNode #"+nodeId+" "+p0()+" -> <not set>";
 			case 0:
-				return "LineNode <no points>";
+				return "LineNode #"+nodeId+" <no points>";
 			default:
 				throw new IllegalStateException("Line with "+getChildCount()+" children?");
 		}

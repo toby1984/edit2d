@@ -63,9 +63,16 @@ public class EditorPanel extends JPanel {
 				case KeyEvent.VK_DELETE:
 					synchronized( root )
 					{
-						if ( NodeUtils.deleteNodes( highlightManager.getHighlighted() ) )
+						final List<IGraphNode> nodesToDelete = highlightManager.getHighlighted();
+						if ( ! nodesToDelete.isEmpty() && NodeUtils.deleteNodes( nodesToDelete ) )
 						{
 							highlightManager.clearHighlights();
+							final IGraphNode commonParent = NodeUtils.findCommonParentPolygon( nodesToDelete );
+							if ( commonParent != null ) {
+								subtreeStructureChanged( commonParent );
+							} else {
+								nodesToDelete.forEach( n -> subtreeStructureChanged( n ) );
+							}
 							repaint();
 						}
 					}
@@ -163,10 +170,12 @@ public class EditorPanel extends JPanel {
 				if ( candidate != null )
 				{
 					if ( highlightManager.setHighlight( candidate ) ) {
+						setToolTipText( candidate.toString() );
 						repaint();
 					}
 				}
 				else if ( highlightManager.clearHighlights() ) {
+					setToolTipText( null );
 					repaint();
 				}
 
@@ -188,7 +197,6 @@ public class EditorPanel extends JPanel {
 				{
 					final int dx = e.getX() - lastPos.x;
 					final int dy = e.getY() - lastPos.y;
-
 
 					synchronized( root )
 					{
@@ -296,16 +304,13 @@ public class EditorPanel extends JPanel {
 		}
 		else if ( t instanceof PointNode  )
 		{
-			if ( t.getMetaData().isHighlighted() || getEditMode() == EditMode.CREATE_POINTS )
-			{
-				final Vector2 p = ((PointNode) t).getPointInViewCoordinates();
-				if ( t.getMetaData().isHighlighted() ) {
-					graphics.setColor( HIGHLIGHT_COLOR );
-				} else {
-					graphics.setColor( EditorPanel.POINT_COLOR );
-				}
-				graphics.drawOval( (int) (p.x - 3) , (int) (p.y - 3 ) , 7 , 7 );
+			final Vector2 p = ((PointNode) t).getPointInViewCoordinates();
+			if ( t.getMetaData().isHighlighted() ) {
+				graphics.setColor( HIGHLIGHT_COLOR );
+			} else {
+				graphics.setColor( EditorPanel.POINT_COLOR );
 			}
+			graphics.drawOval( (int) (p.x - 3) , (int) (p.y - 3 ) , 7 , 7 );
 		}
 	}
 }

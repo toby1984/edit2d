@@ -4,6 +4,7 @@ import java.awt.Point;
 import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -142,44 +143,75 @@ public class SimplePolygon extends AbstractGraphNode
 		return Intersector.intersectSegments( line.p0() , line.p1() , p0 , p1 , result );
 	}
 
-	public void removePoint(PointNode pointToRemove)
+	private LineNode findLine(PointNode pn)
 	{
-		// find line
-		LineNode affectedLine = null;
 		for ( final IGraphNode child : children )
 		{
-			if ( child.indexOf( pointToRemove ) != -1 ) {
-				affectedLine = (LineNode) child;
-				break;
+			if ( child.indexOf( pn ) != -1 ) {
+				return (LineNode) child;
 			}
 		}
-		if ( affectedLine == null ) {
-			throw new NoSuchElementException("No line of this polygon contains "+pointToRemove);
+		throw new NoSuchElementException("No line of this polygon contains "+pn);
+	}
+
+	public void removePointsAt(PointNode p1)
+	{
+		final Vector2 p = p1.getPointInViewCoordinates();
+
+		final List<PointNode> points = NodeUtils.getPointsAt( p1  , (int) p.x , (int) p.y );
+		if ( points.size() != 2 ) {
+			throw new RuntimeException("Found "+points.size()+" points while looking for companion of "+p1);
+		}
+		removePoints(points.get(0),points.get(1));
+	}
+
+	public void removePoints(PointNode p1,PointNode p2)
+	{
+		if ( getChildCount() == 3 ) {
+			throw new RuntimeException("Refusing to remove point from triangle");
 		}
 
-		final int pointIdx = affectedLine.indexOf( pointToRemove );
-		if ( pointIdx < 0 || pointIdx > 1) {
-			throw new IllegalStateException("Point has invalid point index "+pointIdx);
+		System.out.println("Removing points "+p1+" and "+p2);
+
+		// find line
+		LineNode affectedLine1 = findLine(p1);
+		LineNode affectedLine2 = findLine(p2);
+
+		if ( indexOf(affectedLine1) > indexOf( affectedLine2 ) )
+		{
+			final LineNode tmp = affectedLine1;
+			affectedLine1 = affectedLine2;
+			affectedLine2 = tmp;
 		}
 
-		final int remainingIdx = 1 - pointIdx;
-		final PointNode remainingPoint = (PointNode) affectedLine.child(remainingIdx);
-		final Vector2 viewCoordinates = remainingPoint.getPointInViewCoordinates();
-		pointToRemove.set( (int) viewCoordinates.x , (int) viewCoordinates.y );
+		System.out.println("Line A: "+affectedLine1+" @ index "+indexOf( affectedLine1 ) );
+		System.out.println("Line B: "+affectedLine2+" @ index "+indexOf( affectedLine2 ) );
 
-		if ( pointIdx == 0 ) {
-			predecessor( affectedLine ).child(1).set( (int) viewCoordinates.x , (int) viewCoordinates.y );
-		} else {
-			successor( affectedLine ).child(0).set( (int) viewCoordinates.x , (int) viewCoordinates.y );
+		if ( indexOf(affectedLine1) != 0 )
+		{
+			final PointNode remainingPoint = (PointNode) successor( affectedLine2 ).child(0);
+			final Vector2 viewCoordinates = remainingPoint.getPointInViewCoordinates();
+
+			affectedLine1.child( 1 ).set( (int) viewCoordinates.x , (int) viewCoordinates.y , false );
+			unlink( affectedLine2 );
+			Observers.link(  new HashSet<>( Arrays.asList( EventType.values() ) ) , successor(affectedLine2).child(0) , affectedLine1.child(1) );
+			affectedLine2.remove();
 		}
+		else
+		{
+			final PointNode remainingPoint = (PointNode) predecessor(affectedLine2).child(1);
+			final Vector2 viewCoordinates = remainingPoint.getPointInViewCoordinates();
 
-		if ( affectedLine.length() < 1.0 ) {
-			System.out.println("Line too short, removing "+affectedLine);
-			removeLine( affectedLine );
+			affectedLine1.child( 0 ).set( (int) viewCoordinates.x , (int) viewCoordinates.y , false );
+			unlink( affectedLine2 );
+			Observers.link(  new HashSet<>( Arrays.asList( EventType.values() ) ) , predecessor(affectedLine2).child(1) , affectedLine1.child(0) );
+			affectedLine2.remove();
 		}
 	}
 
 	public void removeLine(LineNode lineToRemove) {
+
+		System.out.println("removeLine(): Removing line "+lineToRemove);
 
 		if ( getChildCount() <= 3 ) {
 			throw new UnsupportedOperationException("Refusing to remove line from polygon with only "+getChildCount()+" lines");
@@ -191,11 +223,20 @@ public class SimplePolygon extends AbstractGraphNode
 		// TODO: The following code relies on the fact that lines in a polygon are always
 		// TODO: linked in a clock-wise fashion
 
-		Observers.unlink( lineToRemove );
+		unlink( lineToRemove );
 
+		final Vector2 viewCoords = ((PointNode) successor.child(0)).getPointInViewCoordinates();
+
+		predecessor.child(1).set( (int) viewCoords.x , (int) viewCoords.y , false );
 		Observers.link( new HashSet<>( Arrays.asList( EventType.values() ) ) , predecessor.child(1), successor.child(0) );
 
 		lineToRemove.remove();
+	}
+
+	private void unlink(LineNode lineToRemove) {
+		Observers.unlink( lineToRemove.child(0) );
+		Observers.unlink( lineToRemove.child(1) );
+		Observers.unlink( lineToRemove );
 	}
 
 	private LineNode successor(LineNode n) {
@@ -212,5 +253,10 @@ public class SimplePolygon extends AbstractGraphNode
 			return (LineNode) child( getChildCount()-1 );
 		}
 		return (LineNode) child( idx - 1 );
+	}
+
+	@Override
+	public String toString() {
+		return "SimplePolygon #"+nodeId;
 	}
 }

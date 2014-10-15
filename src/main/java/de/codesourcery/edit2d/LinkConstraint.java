@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class LinkConstraint implements INodeObserver {
 
@@ -61,7 +62,33 @@ public class LinkConstraint implements INodeObserver {
 		{
 			nodes.addAll(Arrays.asList(additional) );
 		}
+		for ( int i = 0 ; i < nodes.size() ; i++ )
+		{
+			final IGraphNode node1 = nodes.get(i);
+			for ( int j=i+1 ; j < nodes.size() ; j++ ) {
+				if ( node1 == nodes.get(j ) ) {
+					throw new RuntimeException("Refusing to link node "+node1+" with itself");
+				}
+			}
+		}
 		nodes.forEach( n -> n.addObserver( this ) );
+	}
+
+	public static Predicate<INodeObserver> link(IGraphNode side)
+	{
+		return new Predicate<INodeObserver>() {
+
+			@Override
+			public boolean test(INodeObserver t)
+			{
+				if ( t instanceof LinkConstraint )
+				{
+					final LinkConstraint cnstr = (LinkConstraint) t;
+					return cnstr.nodes.size() == 2 && cnstr.nodes.contains( side );
+				}
+				return false;
+			}
+		};
 	}
 
 	public static void link(Set<EventType> categories,IGraphNode n1,IGraphNode n2,IGraphNode... additional)

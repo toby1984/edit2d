@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 public class Observers {
 
@@ -48,24 +49,24 @@ public class Observers {
 
 	public static void unlink(IGraphNode toUnlink)
 	{
-		toUnlink.getRoot().visitPostOrder( node -> {
+		final IGraphNode root = toUnlink.getRoot();
+		toUnlink.visitPostOrder( currentNode ->
+		{
+			final Predicate<INodeObserver> predicate = LinkConstraint.link( toUnlink );
+			root.visitPostOrder( node -> {
 
-			final List<INodeObserver> observers = node.getObservers();
-			for (int i = 0; i < observers.size(); i++)
-			{
-				final INodeObserver o = observers.get(i);
-				if ( o instanceof LinkConstraint )
+				final List<INodeObserver> observers = node.getObservers();
+				for (int i = 0; i < observers.size(); i++)
 				{
-					final List<IGraphNode> nodes = ((LinkConstraint) o).getLinkedNodes();
-					if ( nodes.size() == 2 ) {
-						if ( nodes.stream().anyMatch( x -> x == toUnlink ) )
-						{
-							observers.remove(i);
-							i--;
-						}
+					final INodeObserver o = observers.get(i);
+					if ( predicate.test( o ) )
+					{
+						System.out.println("Removing: "+o);
+						observers.remove(i);
+						i--;
 					}
 				}
-			}
+			});
 		});
 	}
 

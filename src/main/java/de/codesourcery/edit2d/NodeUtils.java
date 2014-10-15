@@ -1,7 +1,9 @@
 package de.codesourcery.edit2d;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class NodeUtils {
 
@@ -96,7 +98,9 @@ public class NodeUtils {
 				if ( node.getParent() instanceof LineNode && node.getParent().getParent() instanceof SimplePolygon )
 				{
 					final PointNode pn = (PointNode) node;
-					((SimplePolygon) node.getParent().getParent()).removePoint( pn );
+					((SimplePolygon) node.getParent().getParent()).removePointsAt( pn );
+				} else {
+					throw new RuntimeException("Don't know how to remove point from "+node.getParent() );
 				}
 			}
 			else if ( node instanceof LineNode && node.getParent() instanceof SimplePolygon ) // line removed from polygon
@@ -119,5 +123,103 @@ public class NodeUtils {
 			}
 		}
 		return true;
+	}
+
+	public static IGraphNode findCommonParentPolygon(List<IGraphNode> nodes)
+	{
+		return findCommonParent( nodes.stream().map( n -> {
+			if ( n instanceof LineNode ) {
+				return n.getParent();
+			}
+			if ( n instanceof PointNode )
+			{
+				if ( n.getParent() instanceof LineNode) {
+					if ( n.getParent().getParent() instanceof SimplePolygon) {
+						return n.getParent().getParent();
+					}
+				}
+			}
+			return n;
+		}).collect(Collectors.toList() ) );
+	}
+
+	public static IGraphNode findCommonParent(List<IGraphNode> nodes)
+	{
+		if ( nodes.isEmpty() ) {
+			return null;
+		}
+
+		if ( nodes.size() == 1 ) {
+			return nodes.get(0).getParent();
+		}
+
+		final List<IGraphNode[]> paths = nodes.stream().map( n -> getPathToRoot(n) ).collect( Collectors.toList() );
+
+		final int maxCommonLength = paths.stream().mapToInt( n -> n.length ).min().getAsInt();
+
+		final int len = paths.size();
+
+		for ( int result = 0 ; result < maxCommonLength ; result++ )
+		{
+			final IGraphNode expected = paths.get(0)[result];
+			for ( int j = 1 ; j < len ; j++ )
+			{
+				final IGraphNode actual = paths.get(j)[result];
+				if ( expected != actual )
+				{
+					if ( result == 0 ) {
+						return null; // no common path
+					}
+					return paths.get(0)[result-1];
+				}
+			}
+			result++;
+		}
+		// all paths are the same,pick from first
+		final IGraphNode[] path = paths.get(0);
+		return path[ path.length - 2 ];
+	}
+
+	/**
+	 * Returns the path to the tree root node INCLUDING the input node.
+	 *
+	 * @param node
+	 * @return Path starting at tree root
+	 */
+	public static IGraphNode[] getPathToRoot(IGraphNode node) {
+
+		final List<IGraphNode> result = new ArrayList<>();
+		IGraphNode current = node;
+		while(current != null ) {
+			result.add( current );
+			current = current.getParent();
+		}
+		Collections.reverse( result );
+		return result.toArray( new IGraphNode[ result.size() ] );
+	}
+
+	public static List<PointNode> getPointsAt(IGraphNode node,int x,int y) {
+		final List<PointNode> result = new ArrayList<>();
+		getPointsAt(node.getRoot(),x,y,result);
+		return result;
+	}
+
+	private static void getPointsAt(IGraphNode current,int x,int y,List<PointNode> result) {
+
+		if ( current instanceof PointNode)
+		{
+			final float d = current.distanceTo(x, y);
+			System.out.println("distance: "+current+" -> ("+x+","+y+") = "+d);
+			if ( d < 2 ) {
+				result.add( (PointNode) current );
+			}
+		}
+		else
+		{
+			for ( final IGraphNode child : current.getChildren() )
+			{
+				getPointsAt(child,x,y,result);
+			}
+		}
 	}
 }

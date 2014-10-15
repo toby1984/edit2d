@@ -27,12 +27,12 @@ public class Main extends JFrame {
 
 		final EditorPanel p = new EditorPanel();
 
-		p.getRoot().addChildren( new SimplePolygon(50,50,50,50 ) );
+		p.getRoot().addChildren( new SimplePolygon(100,100,100,100 ) );
 
 		p.getRoot().update( new Matrix3() );
 
-		p.setPreferredSize( new Dimension(640,480 ) );
-		p.setSize( new Dimension(640,480 ) );
+		p.setPreferredSize( new Dimension(800,480 ) );
+		p.setSize( new Dimension(800,480 ) );
 
 		getContentPane().setLayout( new GridBagLayout() );
 
