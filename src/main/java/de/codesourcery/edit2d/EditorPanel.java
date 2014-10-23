@@ -35,7 +35,7 @@ public class EditorPanel extends JPanel {
 	protected final HighlightManager highlightManager = new HighlightManager();
 
 	public static enum EditMode {
-		MOVE,DRAW,CREATE_POINTS;
+		MOVE,DRAW,CREATE_POINTS,ROTATE;
 	}
 
 	private EditMode currentEditingMode = EditMode.MOVE;
@@ -204,25 +204,24 @@ public class EditorPanel extends JPanel {
 				{
 					if ( dragged != null )
 					{
-						final int dx = e.getX() - lastPos.x;
-						final int dy = e.getY() - lastPos.y;
+						int dx = e.getX() - lastPos.x;
+						int dy = e.getY() - lastPos.y;
 
 						final EventType t = EventType.TRANSLATED;
 						if ( dragged instanceof LineNode )
 						{
 							final LineNode l = (LineNode) dragged;
 							if ( l.isHorizontalLine() ) {
-								dragged.translate( t , 0 , dy );
+								dx = 0;
 							} else if ( l.isVerticalLine() ) {
-								dragged.translate( t , dx , 0 );
-							} else {
-								dragged.translate( t , dx , dy );
+								dy = 0;
 							}
 						}
-						else
-						{
-							dragged.translate( t , dx, dy );
-						}
+						System.out.flush();
+						System.err.flush();
+						System.err.println("--------- Mouse dragged , translating "+dx+","+dy);
+						System.err.flush();
+						dragged.translate( t , dx, dy );
 					}
 					lastPos.setLocation( e.getPoint() );
 					if ( dragged != null ) {

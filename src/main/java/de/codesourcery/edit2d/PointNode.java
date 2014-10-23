@@ -11,7 +11,33 @@ import com.badlogic.gdx.math.Vector2;
 public class PointNode extends AbstractGraphNode
 {
 	public final Vector2 p = new Vector2();
-	private final LightweightNodeData metaData = new LightweightNodeData();
+	private final LightweightNodeData metaData = new LightweightNodeData() {
+
+		@Override
+		public Vector2 viewToModel(Vector2 v) {
+			return new Vector2(v);
+		}
+
+//		@Override
+//		public Vector2 viewToModel(Vector2 v) {
+//			 return getParent().getMetaData().viewToModel( v );
+//		}
+//
+//		@Override
+//		public Vector2 modelToView(Vector2 v) {
+//			return getParent().getMetaData().modelToView( v );
+//		}
+//
+//		@Override
+//		public Matrix3 getModelMatrix() {
+//			return getParent().getMetaData().getModelMatrix();
+//		}
+//
+//		@Override
+//		public Matrix3 getCombinedMatrix() {
+//			return getParent().getMetaData().getCombinedMatrix();
+//		}
+	};
 
 	public PointNode(Point p) {
 		this(p.x,p.y);
@@ -61,8 +87,11 @@ public class PointNode extends AbstractGraphNode
 		final IGraphNode root = getRoot();
 		if ( ((RootNode) root).queueUpdate( eventType , this , dx , dy ) )
 		{
+			System.out.println("*** Translating point by "+dx+","+dy);
 			this.p.x += dx;
 			this.p.y += dy;
+		} else {
+			System.err.println("--- Not translating point,already moved");
 		}
 	}
 

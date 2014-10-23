@@ -72,6 +72,7 @@ public class RootNode extends RegularGraphNode
 			if ( key == null ) {
 				break;
 			}
+			System.out.println("Processing node updates on: "+key);
 
 			final IGraphNode finalKey = key;
 			visited.add( key );

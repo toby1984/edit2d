@@ -246,7 +246,7 @@ public class SimplePolygon extends RegularGraphNode
 
 		final Vector2 pv1 = p1.getPointInViewCoordinates();
 		final Vector2 pv2 = p2.getPointInViewCoordinates();
-		final float dst = pv1.dst( pv2 );
+		final float dst = (float) Math.floor( pv1.dst( pv2 ) );
 		final boolean result = dst <= 1.0;
 		if ( ! result ) {
 			System.err.println("distance: "+dst);

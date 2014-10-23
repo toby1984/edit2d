@@ -43,9 +43,6 @@ public abstract class AbstractGraphNode implements IGraphNode
 
 	@Override
 	public final void setParent(IGraphNode parent) {
-		if ( this.parent != null && parent != null && this.parent != parent ) {
-			throw new IllegalStateException("Parent already set on "+this);
-		}
 		this.parent = parent;
 	}
 

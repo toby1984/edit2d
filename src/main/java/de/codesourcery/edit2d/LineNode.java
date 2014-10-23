@@ -3,15 +3,43 @@ package de.codesourcery.edit2d;
 import java.awt.Point;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Rectangle2D.Float;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 
 import com.badlogic.gdx.math.Intersector;
+import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Vector2;
 
-public class LineNode extends RegularGraphNode
+public class LineNode extends AbstractGraphNode
 {
 	private static final float EPSILON = 0.0001f;
+
+	private final LightweightNodeData metaData = new LightweightNodeData()
+	{
+		@Override
+		public Vector2 viewToModel(Vector2 v) {
+			return getParent().getMetaData().viewToModel( v );
+		}
+
+		@Override
+		public Vector2 modelToView(Vector2 v) {
+			return getParent().getMetaData().modelToView( v );
+		}
+
+		@Override
+		public Matrix3 getModelMatrix() {
+			return getParent().getMetaData().getModelMatrix();
+		}
+
+		@Override
+		public Matrix3 getCombinedMatrix() {
+			return getParent().getMetaData().getCombinedMatrix();
+		}
+	};
+
+	private final List<IGraphNode> children = new ArrayList<>();
 
 	public LineNode(Point p0,Point p1) {
 		this( new PointNode(p0) ,new PointNode(p1) );
@@ -31,6 +59,12 @@ public class LineNode extends RegularGraphNode
 
 	public float length() {
 		return p0().dst(p1());
+	}
+
+	@Override
+	public void translate(EventType eventType, int dx, int dy)
+	{
+		children.forEach( node -> node.translate(eventType, dx, dy) );
 	}
 
 	@Override
@@ -138,5 +172,23 @@ public class LineNode extends RegularGraphNode
 			return distanceTo(x,y) <= 1;
 		}
 		return false;
+	}
+
+	@Override
+	public List<IGraphNode> getChildren() {
+		return children;
+	}
+
+	@Override
+	public INodeData getMetaData() {
+		return metaData;
+	}
+
+	@Override
+	public void update(Matrix3 matrix) {
+	}
+
+	@Override
+	public void update() {
 	}
 }

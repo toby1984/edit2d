@@ -8,7 +8,7 @@ import com.badlogic.gdx.math.Vector2;
  *
  * @author tobias.gierke@code-sourcery.de
  */
-public class LightweightNodeData implements INodeData {
+public abstract class LightweightNodeData implements INodeData {
 
 	public static enum Flag
 	{
@@ -89,30 +89,6 @@ public class LightweightNodeData implements INodeData {
 	}
 
 	@Override
-	public void translate(float dx, float dy) {
-		throw new UnsupportedOperationException("translate() not implemented");
-	}
-
-	@Override
-	public Vector2 modelToView(Vector2 v) {
-		throw new UnsupportedOperationException("modelToView() not implemented");
-	}
-
-	@Override
-	public void updateCombinedMatrix(Matrix3 parent) {
-	}
-
-	@Override
-	public Matrix3 getModelMatrix() {
-		throw new UnsupportedOperationException("getModelMatrix() not implemented");
-	}
-
-	@Override
-	public Matrix3 getCombinedMatrix() {
-		throw new UnsupportedOperationException("getCombinedMatrix() not implemented");
-	}
-
-	@Override
 	public final boolean isHighlighted() {
 		return isSet(Flag.HIGHLIGHTED);
 	}
@@ -123,8 +99,18 @@ public class LightweightNodeData implements INodeData {
 	}
 
 	@Override
-	public Vector2 viewToModel(Vector2 v) {
-		return new Vector2(v);
+	public void copyFrom(INodeData other)
+	{
+		this.flags = ((LightweightNodeData) other).flags;
+	}
+
+	/*
+	 * ========== UNSUPPORTED OPERATIONS ==============
+	 */
+
+	@Override
+	public Vector2 modelToView(Vector2 v) {
+		throw new UnsupportedOperationException("modelToView() not implemented");
 	}
 
 	@Override
@@ -133,8 +119,22 @@ public class LightweightNodeData implements INodeData {
 	}
 
 	@Override
-	public void copyFrom(INodeData other)
-	{
-		this.flags = ((LightweightNodeData) other).flags;
+	public void translate(float dx, float dy) {
+		throw new UnsupportedOperationException("translate() not implemented");
+	}
+
+	@Override
+	public Matrix3 getCombinedMatrix() {
+		throw new UnsupportedOperationException("getCombinedMatrix() not implemented");
+	}
+
+	@Override
+	public void updateCombinedMatrix(Matrix3 parent) {
+		throw new UnsupportedOperationException("updateCombinedMatrix() not implemented");
+	}
+
+	@Override
+	public Matrix3 getModelMatrix() {
+		throw new UnsupportedOperationException("getModelMatrix() not implemented");
 	}
 }

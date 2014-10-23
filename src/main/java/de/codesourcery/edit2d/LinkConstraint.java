@@ -121,6 +121,7 @@ public class LinkConstraint implements INodeObserver {
 	{
 		for ( final IGraphNode n : nodes ) {
 			if ( n != node ) {
+				System.out.println( this.type+" translates "+n+" by "+dx+","+dy);
 				type.nodeTranslated( eventType, n , dx , dy );
 			}
 		}
