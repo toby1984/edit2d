@@ -9,7 +9,7 @@ import java.util.HashSet;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Vector2;
 
-public class LineNode extends AbstractGraphNode
+public class LineNode extends RegularGraphNode
 {
 	private static final float EPSILON = 0.0001f;
 
@@ -88,10 +88,13 @@ public class LineNode extends AbstractGraphNode
 
 		final LineNode newLine = new LineNode( splitPoint2 , end  );
 
-		newLine.getMetaData().setModelMatrix( getMetaData().getModelMatrix() );
-		newLine.update( getParent().getMetaData().getCombinedMatrix() );
+		newLine.getMetaData().copyFrom( getMetaData() );
 
 		getParent().insertChild( getParent().indexOf( this )+1 , newLine );
+
+		if ( getParent() instanceof SimplePolygon) {
+			((SimplePolygon) getParent() ).assertValid();
+		}
 		return true;
 	}
 

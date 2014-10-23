@@ -5,4 +5,6 @@ public interface ISceneObserver {
 	public void subtreeStructureChanged(IGraphNode changedNode);
 
 	public void subtreeValuesChanged(IGraphNode changedNode);
+
+	public void modelChanged(RootNode newRoot);
 }

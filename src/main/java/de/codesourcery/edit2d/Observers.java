@@ -70,6 +70,14 @@ public class Observers {
 		});
 	}
 
+	public static boolean isLink(INodeObserver o) {
+		return o instanceof LinkConstraint;
+	}
+
+	public static Predicate<INodeObserver> isXYLinkPredicate(IGraphNode nodeToLink) {
+		return ob -> isLink( ob ) && ((LinkConstraint) ob).hasType(LinkConstraint.LinkType.XY) && ((LinkConstraint) ob).getLinkedNodes().contains( nodeToLink );
+	}
+
 	public static void linkX(EventType type,IGraphNode n1,IGraphNode n2,IGraphNode... additional)
 	{
 		LinkConstraint.linkX(asSet(type),n1,n2,additional);

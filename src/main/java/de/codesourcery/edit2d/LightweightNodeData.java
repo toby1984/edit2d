@@ -33,6 +33,10 @@ public class LightweightNodeData implements INodeData {
 		}
 	}
 
+	/* !!!!!!!!!!!!!!!!!!!!!!!!!
+	 * Make sure to adjust copyFrom(INodeData) when adding fields here
+	 * !!!!!!!!!!!!!!!!!!!!!!!!!
+	 */
 	protected int flags = Flag.SELECTABLE.set(0);
 
 	protected final void setFlag(Flag flag,boolean onOff) {
@@ -126,5 +130,11 @@ public class LightweightNodeData implements INodeData {
 	@Override
 	public void setModelMatrix(Matrix3 m) {
 		throw new UnsupportedOperationException("setModelMatrix() not implemented");
+	}
+
+	@Override
+	public void copyFrom(INodeData other)
+	{
+		this.flags = ((LightweightNodeData) other).flags;
 	}
 }

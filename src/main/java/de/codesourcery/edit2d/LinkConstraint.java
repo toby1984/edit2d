@@ -37,6 +37,16 @@ public class LinkConstraint implements INodeObserver {
 		public abstract void nodeTranslated(EventType eventType,IGraphNode node, int dx, int dy);
 	}
 
+	public static boolean areXYLinked(IGraphNode n1,IGraphNode n2)
+	{
+		return n1.getObservers().stream().anyMatch( Observers.isXYLinkPredicate( n2 ) ) &&
+				n2.getObservers().stream().anyMatch( Observers.isXYLinkPredicate( n1 ) );
+	}
+
+	public boolean hasType(LinkType t) {
+		return t.equals( this.type );
+	}
+
 	public List<IGraphNode> getLinkedNodes() {
 		return nodes;
 	}

@@ -1,9 +1,12 @@
 package de.codesourcery.edit2d;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import com.badlogic.gdx.math.Matrix3;
 
 public class NodeUtils {
 
@@ -221,5 +224,24 @@ public class NodeUtils {
 				getPointsAt(child,x,y,result);
 			}
 		}
+	}
+
+	public static String matrixToString(Matrix3 matrix) {
+
+		final DecimalFormat df = new DecimalFormat("0000.000");
+		final StringBuilder builder = new StringBuilder();
+		for ( int row = 0 ; row < 3 ; row++ )
+		{
+			for ( int col = 0 ; col < 3 ; col++ )
+			{
+				final int offset = row*3 + col;
+				builder.append( df.format( matrix.val[offset] ) );
+				if ( (col+1) < 3 ) {
+					builder.append(" | ");
+				}
+			}
+			builder.append("\n");
+		}
+		return builder.toString();
 	}
 }

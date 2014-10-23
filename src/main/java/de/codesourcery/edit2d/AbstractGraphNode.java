@@ -5,61 +5,16 @@ import java.util.List;
 
 import com.badlogic.gdx.math.Matrix3;
 
-public abstract class AbstractGraphNode implements IGraphNode {
-
-	protected final List<IGraphNode> children = new ArrayList<>();
+public abstract class AbstractGraphNode implements IGraphNode
+{
 	protected final List<INodeObserver> observers = new ArrayList<>();
-
-	protected final NodeData metaData = new NodeData();
+	protected IGraphNode parent;
 
 	protected final long nodeId = NODE_ID.incrementAndGet();
 
-	private IGraphNode parent;
-
 	@Override
-	public final void visitPreOrder(INodeVisitor v) {
-		v.visit( this );
-		children.forEach( node -> node.visitPreOrder( v ) );
-	}
-
-	@Override
-	public final void removeObserver(INodeObserver o)
-	{
-		final int len = observers.size();
-		for ( int i = 0 ; i < len ; i++ ) {
-			if ( observers.get(i) == o )
-			{
-				observers.remove( i );
-				i--;
-			}
-		}
-	}
-
-	@Override
-	public final void remove() {
-		getParent().removeChild( this );
-	}
-
-	@Override
-	public final void removeChild(IGraphNode child) {
-		children.remove( child );
-		child.setParent(null);
-	}
-
-	@Override
-	public final List<INodeObserver> getObservers() {
-		return observers;
-	}
-
-	@Override
-	public final IGraphNode getRoot()
-	{
-		return getParent() == null ? this : getParent().getRoot();
-	}
-
-	@Override
-	public final int indexOf(IGraphNode child) {
-		return children.indexOf(child);
+	public final boolean isDirty() {
+		return getMetaData().isDirty();
 	}
 
 	@Override
@@ -68,23 +23,15 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	}
 
 	@Override
-	public final void update()
-	{
-		if ( isDirty() )
-		{
-			update( getParent().getMetaData().getCombinedMatrix() );
-		} else {
-			for ( final IGraphNode child : children )
-			{
-				child.update();
-			}
-		}
+	public final void visitPreOrder(INodeVisitor v) {
+		v.visit( this );
+		getChildren().forEach( node -> node.visitPreOrder( v ) );
 	}
 
 	@Override
 	public final void visitPostOrder(INodeVisitor v)
 	{
-		final List<IGraphNode> copy = new ArrayList<>(this.children);
+		final List<IGraphNode> copy = new ArrayList<>( getChildren() ); // TODO: Why the copying ???
 		copy.forEach( node -> node.visitPostOrder(v) );
 		v.visit(this);
 	}
@@ -103,10 +50,111 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	}
 
 	@Override
-	public final void translate(EventType eventType, int dx, int dy)
+	public final IGraphNode getRoot() {
+		return getParent() == null ? this : getParent().getRoot();
+	}
+
+	@Override
+	public final List<INodeObserver> getObservers() {
+		return observers;
+	}
+
+	@Override
+	public final void removeObserver(INodeObserver o) {
+		final int len = observers.size();
+		for ( int i = 0 ; i < len ; i++ ) {
+			if ( observers.get(i) == o )
+			{
+				observers.remove( i );
+				i--;
+			}
+		}
+	}
+
+	@Override
+	public final IGraphNode child(int index) {
+		return getChildren().get(index);
+	}
+
+	@Override
+	public final void insertChild(int index,IGraphNode n)
+	{
+		getChildren().add( index ,  n );
+		n.setParent( this );
+	}
+
+	@Override
+	public final void setChild(int index,IGraphNode n)
+	{
+		getChildren().set( index ,  n );
+		n.setParent( this );
+	}
+
+	@Override
+	public final void addChildren(IGraphNode n1,IGraphNode... additional)
+	{
+		n1.setParent( this );
+		getChildren().add( n1 );
+
+		if ( additional != null ) {
+			for ( final IGraphNode g : additional )
+			{
+				g.setParent(this);
+				getChildren().add(g);
+			}
+		}
+	}
+
+	@Override
+	public final void remove() {
+		getParent().removeChild( this );
+	}
+
+	@Override
+	public final boolean hasChildren() {
+		return getChildCount() > 0;
+	}
+
+	@Override
+	public final boolean hasNoChildren() {
+		return getChildCount() == 0 ;
+	}
+
+	@Override
+	public final int getChildCount() {
+		return getChildren().size();
+	}
+
+	@Override
+	public final void removeChild(IGraphNode child) {
+		getChildren().remove( child );
+		child.setParent(null);
+	}
+
+	@Override
+	public final int indexOf(IGraphNode child) {
+		return getChildren().indexOf(child);
+	}
+
+	@Override
+	public void update()
+	{
+		if ( isDirty() )
+		{
+			update( getParent().getMetaData().getCombinedMatrix() );
+		} else {
+			for ( final IGraphNode child : getChildren() )
+			{
+				child.update();
+			}
+		}
+	}
+
+	@Override
+	public void translate(EventType eventType, int dx, int dy)
 	{
 		if ( ((RootNode) getRoot()).queueUpdate( eventType , this , dx , dy ) ) {
-			metaData.translate( dx ,  dy );
+			getMetaData().translate( dx ,  dy );
 		}
 	}
 
@@ -116,76 +164,13 @@ public abstract class AbstractGraphNode implements IGraphNode {
 	}
 
 	@Override
-	public final boolean isDirty() {
-		return metaData.isDirty();
-	}
-
-	@Override
-	public final IGraphNode child(int index) {
-		return children.get(index);
-	}
-
-	@Override
-	public final void insertChild(int index,IGraphNode n)
+	public void update(Matrix3 matrix)
 	{
-		children.add( index ,  n );
-		n.setParent( this );
-	}
-
-	@Override
-	public final void setChild(int index,IGraphNode n)
-	{
-		children.set( index ,  n );
-		n.setParent( this );
-	}
-
-	@Override
-	public final void addChildren(IGraphNode n1,IGraphNode... additional)
-	{
-		n1.setParent( this );
-		children.add( n1 );
-
-		if ( additional != null ) {
-			for ( final IGraphNode g : additional )
-			{
-				g.setParent(this);
-				children.add(g);
-			}
-		}
-	}
-
-	@Override
-	public final void update(Matrix3 matrix)
-	{
-		metaData.updateCombinedMatrix( matrix );
-		for ( final IGraphNode child : children )
+		System.out.println("update(): Called on "+this+" with "+NodeUtils.matrixToString(matrix));
+		getMetaData().updateCombinedMatrix( matrix );
+		for ( final IGraphNode child : getChildren() )
 		{
-			child.update( metaData.combinedMatrix );
+			child.update( getMetaData().getCombinedMatrix() );
 		}
-	}
-
-	@Override
-	public final NodeData getMetaData() {
-		return metaData;
-	}
-
-	@Override
-	public final List<IGraphNode> getChildren() {
-		return children;
-	}
-
-	@Override
-	public final int getChildCount() {
-		return children.size();
-	}
-
-	@Override
-	public final boolean hasChildren() {
-		return ! children.isEmpty();
-	}
-
-	@Override
-	public final boolean hasNoChildren() {
-		return children.isEmpty();
 	}
 }

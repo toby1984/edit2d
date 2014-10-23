@@ -6,8 +6,14 @@ import com.badlogic.gdx.math.Vector2;
 
 public class NodeData extends LightweightNodeData {
 
+	/* !!!!!!!!!!!!!!!!!!!!!!!!!
+	 * Make sure to adjust copyFrom(INodeData) when adding fields here
+	 * !!!!!!!!!!!!!!!!!!!!!!!!!
+	 */
+
 	public final Matrix3 modelMatrix = new Matrix3();
 	public final Matrix3 combinedMatrix = new Matrix3();
+	public final Matrix3 invMatrix = new Matrix3();
 
 	private float dx;
 	private float dy;
@@ -23,9 +29,7 @@ public class NodeData extends LightweightNodeData {
 	@Override
 	public Vector2 viewToModel(Vector2 v)
 	{
-		// TODO: Always calculating the inverse here might become too slow... maybe do this in updateCombinedMatrix() instead
-		final Matrix3 inv = new Matrix3( getCombinedMatrix() ).inv();
-		return new Vector2(v).mul( inv );
+		return new Vector2(v).mul( invMatrix );
 	}
 
 	@Override
@@ -48,6 +52,9 @@ public class NodeData extends LightweightNodeData {
 	{
 		this.combinedMatrix.set( modelMatrix );
 		this.combinedMatrix.mul( parent );
+
+		this.invMatrix.set( this.combinedMatrix );
+		this.invMatrix.inv();
 		clearFlag(Flag.DIRTY);
 	}
 
@@ -60,5 +67,20 @@ public class NodeData extends LightweightNodeData {
 	public void setModelMatrix(Matrix3 m) {
 		this.modelMatrix.set( m );
 		markDirty();
+	}
+
+	@Override
+	public void copyFrom(INodeData other)
+	{
+		super.copyFrom( other );
+		if ( other instanceof NodeData )
+		{
+			final NodeData that = (NodeData) other;
+			this.modelMatrix.set( that.modelMatrix );
+			this.combinedMatrix.set( that.combinedMatrix );
+			this.invMatrix.set( that.invMatrix );
+			this.dx = that.dx;
+			this.dy = that.dy;
+		}
 	}
 }

@@ -7,7 +7,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
-public class RootNode extends AbstractGraphNode
+public class RootNode extends RegularGraphNode
 {
 	protected final Map<IGraphNode,NodeUpdate> nodeUpdates = new IdentityHashMap<>();
 

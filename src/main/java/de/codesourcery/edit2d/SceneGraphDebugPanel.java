@@ -8,6 +8,7 @@ import java.util.List;
 
 import javax.swing.JPanel;
 import javax.swing.JTree;
+import javax.swing.ToolTipManager;
 import javax.swing.event.TreeModelEvent;
 import javax.swing.event.TreeModelListener;
 import javax.swing.tree.DefaultTreeCellRenderer;
@@ -20,14 +21,17 @@ public class SceneGraphDebugPanel extends JPanel implements ISceneObserver
 	private final MyTreeModel treeModel;
 	private final JTree tree;
 
-	protected final IGraphNode root;
+	private final EditorPanel editor;
+
+	protected volatile IGraphNode root = new RootNode();
 
 	protected final class MyTreeModel implements TreeModel {
 
 		private final List<TreeModelListener> listener = new ArrayList<>();
 
 		@Override
-		public Object getRoot() {
+		public Object getRoot()
+		{
 			return root;
 		}
 
@@ -72,6 +76,11 @@ public class SceneGraphDebugPanel extends JPanel implements ISceneObserver
 			listener.forEach( l -> l.treeStructureChanged( event ) );
 		}
 
+		public void modelChanged() {
+			final TreeModelEvent event = new TreeModelEvent(this, new Object[]{root} );
+			listener.forEach( l -> l.treeStructureChanged(event ) );
+		}
+
 		public void subtreeValuesChanged(IGraphNode changedNode)
 		{
 			changedNode.visitPostOrder( node ->
@@ -95,9 +104,9 @@ public class SceneGraphDebugPanel extends JPanel implements ISceneObserver
 		}
 	}
 
-	public SceneGraphDebugPanel(IGraphNode root)
+	public SceneGraphDebugPanel(EditorPanel editor)
 	{
-		this.root = root;
+		this.editor = editor;
 		this.treeModel = new MyTreeModel();
 		this.tree = new JTree( treeModel );
 
@@ -110,10 +119,25 @@ public class SceneGraphDebugPanel extends JPanel implements ISceneObserver
 			public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded,boolean leaf, int row, boolean hasFocus)
 			{
 				final Component result = super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+				if ( value instanceof IGraphNode && !(value instanceof PointNode)) {
+					final IGraphNode node = (IGraphNode) value;
+					setToolTipText( "<html><body>"+NodeUtils.matrixToString( node.getMetaData().getCombinedMatrix() ).replace("\n", "<br>")+"</body></html>" );
+				} else {
+					setToolTipText(null);
+				}
 				return result;
 			}
 		};
 		tree.setCellRenderer( cellRenderer );
+		tree.getSelectionModel().addTreeSelectionListener( event ->
+		{
+			final Object selected = event.getPath().getLastPathComponent();
+			if ( selected instanceof IGraphNode) {
+				editor.highlight( (IGraphNode) selected);
+			}
+		});
+
+		ToolTipManager.sharedInstance().registerComponent( tree );
 	}
 
 	@Override
@@ -124,5 +148,11 @@ public class SceneGraphDebugPanel extends JPanel implements ISceneObserver
 	@Override
 	public void subtreeValuesChanged(IGraphNode changedNode) {
 		treeModel.subtreeValuesChanged( changedNode );
+	}
+
+	@Override
+	public void modelChanged(RootNode newRoot) {
+		this.root = newRoot;
+		treeModel.modelChanged();
 	}
 }

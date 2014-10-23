@@ -11,7 +11,7 @@ import java.util.Set;
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Vector2;
 
-public class SimplePolygon extends AbstractGraphNode
+public class SimplePolygon extends RegularGraphNode
 {
 	public SimplePolygon(int x,int y,int width,int height)
 	{
@@ -32,6 +32,8 @@ public class SimplePolygon extends AbstractGraphNode
 		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l1.child( 1 ) , l2.child( 0 ) );
 		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l2.child( 1 ) , l3.child( 0 ) );
 		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l3.child( 1 ) , l0.child( 0 ) );
+
+		assertValid();
 	}
 
 	public SimplePolygon() {
@@ -167,51 +169,17 @@ public class SimplePolygon extends AbstractGraphNode
 
 	public void removePoints(PointNode p1,PointNode p2)
 	{
-		if ( getChildCount() == 3 ) {
-			throw new RuntimeException("Refusing to remove point from triangle");
-		}
-
-		System.out.println("Removing points "+p1+" and "+p2);
-
-		// find line
-		LineNode affectedLine1 = findLine(p1);
-		LineNode affectedLine2 = findLine(p2);
-
-		if ( indexOf(affectedLine1) > indexOf( affectedLine2 ) )
-		{
-			final LineNode tmp = affectedLine1;
-			affectedLine1 = affectedLine2;
-			affectedLine2 = tmp;
-		}
-
-		System.out.println("Line A: "+affectedLine1+" @ index "+indexOf( affectedLine1 ) );
-		System.out.println("Line B: "+affectedLine2+" @ index "+indexOf( affectedLine2 ) );
-
-		if ( indexOf(affectedLine1) != 0 )
-		{
-			final PointNode remainingPoint = (PointNode) successor( affectedLine2 ).child(0);
-			final Vector2 viewCoordinates = remainingPoint.getPointInViewCoordinates();
-
-			affectedLine1.child( 1 ).set( (int) viewCoordinates.x , (int) viewCoordinates.y , false );
-			unlink( affectedLine2 );
-			Observers.link(  new HashSet<>( Arrays.asList( EventType.values() ) ) , successor(affectedLine2).child(0) , affectedLine1.child(1) );
-			affectedLine2.remove();
-		}
-		else
-		{
-			final PointNode remainingPoint = (PointNode) predecessor(affectedLine2).child(1);
-			final Vector2 viewCoordinates = remainingPoint.getPointInViewCoordinates();
-
-			affectedLine1.child( 0 ).set( (int) viewCoordinates.x , (int) viewCoordinates.y , false );
-			unlink( affectedLine2 );
-			Observers.link(  new HashSet<>( Arrays.asList( EventType.values() ) ) , predecessor(affectedLine2).child(1) , affectedLine1.child(0) );
-			affectedLine2.remove();
-		}
+		removeLine( findLine(p2) );
 	}
 
 	public void removeLine(LineNode lineToRemove) {
 
-		System.out.println("removeLine(): Removing line "+lineToRemove);
+		final int idx = indexOf(lineToRemove);
+		if ( idx == -1 ) {
+			throw new IllegalArgumentException("Line "+lineToRemove+" is no part of "+this);
+		}
+
+		System.out.println("removeLine(): Removing line "+lineToRemove+" @ "+idx);
 
 		if ( getChildCount() <= 3 ) {
 			throw new UnsupportedOperationException("Refusing to remove line from polygon with only "+getChildCount()+" lines");
@@ -219,6 +187,9 @@ public class SimplePolygon extends AbstractGraphNode
 
 		final LineNode predecessor = predecessor( lineToRemove );
 		final LineNode successor = successor( lineToRemove );
+
+		System.out.println("removeLine(): Predecessor "+predecessor+" @ "+indexOf(predecessor));
+		System.out.println("removeLine(): Successor "+successor+" @ "+indexOf(successor));
 
 		// TODO: The following code relies on the fact that lines in a polygon are always
 		// TODO: linked in a clock-wise fashion
@@ -231,6 +202,56 @@ public class SimplePolygon extends AbstractGraphNode
 		Observers.link( new HashSet<>( Arrays.asList( EventType.values() ) ) , predecessor.child(1), successor.child(0) );
 
 		lineToRemove.remove();
+		assertValid();
+	}
+
+	public void assertValid() {
+
+		if ( getChildCount() < 3 ) {
+			throw new IllegalStateException("Polygon has less than 3 lines ??");
+		}
+
+		for ( int i = 0 ; i < getChildCount() ; i++ )
+		{
+			final LineNode previous = (LineNode) ( (i != 0 ) ? child(i-1) : child( getChildCount() -1 ) );
+			final LineNode current = (LineNode) child(i);
+			final LineNode next = (LineNode) ( (i != getChildCount()-1 ) ? child(i+1) : child(0) );
+
+			if ( ! isPointsAtSameLocation( (PointNode) previous.child(1), (PointNode) current.child(0) ) ) {
+				throw new IllegalStateException("Starting point of line #"+i+" is not the same as end point of line #"+(i-1));
+			}
+
+			if ( ! isPointsAtSameLocation( (PointNode) current.child(1), (PointNode) next.child(0) ) ) {
+				throw new IllegalStateException("End point of line #"+i+" is not the same as end point of line #"+(i+1));
+			}
+
+			if ( current.child(1).getObservers().size() != 1 ) { // TODO: Check for debugging stuff, remove when done ... will fail when user is able to create arbitrary links between points
+				throw new IllegalStateException("End point of line #"+i+" has invalid observer count "+current.child(1).getObservers().size()+" , expected exactly 2. "+current);
+			}
+
+			if ( current.child(0).getObservers().size() != 1 ) { // TODO: Check for debugging stuff, remove when done ... will fail when user is able to create arbitrary links between points
+				throw new IllegalStateException("Starting point of line #"+i+" has invalid observer count "+current.child(0).getObservers().size()+" , expected exactly 2. "+current);
+			}
+
+			if ( ! LinkConstraint.areXYLinked( previous.child(1) , current.child(0) ) ) {
+				throw new IllegalStateException("Line #"+i+" is broken: End point of line "+previous+" is not linked with starting point of line "+current);
+			}
+			if ( ! LinkConstraint.areXYLinked( current.child(1) , next.child(0) ) ) {
+				throw new IllegalStateException("Line #"+i+" is broken: End point of line "+current+" is not linked with starting point of line "+next);
+			}
+		}
+	}
+
+	private boolean isPointsAtSameLocation(PointNode p1,PointNode p2) {
+
+		final Vector2 pv1 = p1.getPointInViewCoordinates();
+		final Vector2 pv2 = p2.getPointInViewCoordinates();
+		final float dst = pv1.dst( pv2 );
+		final boolean result = dst <= 1.0;
+		if ( ! result ) {
+			System.err.println("distance: "+dst);
+		}
+		return result;
 	}
 
 	private void unlink(LineNode lineToRemove) {

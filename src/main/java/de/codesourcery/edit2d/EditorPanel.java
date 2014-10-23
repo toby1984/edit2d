@@ -11,6 +11,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.swing.JPanel;
 
@@ -18,7 +19,9 @@ import com.badlogic.gdx.math.Vector2;
 
 public class EditorPanel extends JPanel {
 
-	private final RootNode root = new RootNode();
+	private final Object modelLock = new Object();
+
+	private RootNode rootNode = new RootNode();
 
 	protected static final Color REGULAR_COLOR = Color.GREEN;
 	protected static final Color HIGHLIGHT_COLOR = Color.BLUE;
@@ -26,6 +29,7 @@ public class EditorPanel extends JPanel {
 
 	protected static final int SELECTION_RADIUS = 10;
 
+	// @GuardedBy( sceneObservers )
 	protected final List<ISceneObserver> sceneObservers = new ArrayList<>();
 
 	protected final HighlightManager highlightManager = new HighlightManager();
@@ -39,6 +43,8 @@ public class EditorPanel extends JPanel {
 	protected Vector2 pointOnLine = null;
 
 	protected EditMode editModeOverride = null;
+
+	private final MyMouseAdapter mouseListener = new MyMouseAdapter();
 
 	private final KeyAdapter keyListener = new KeyAdapter() {
 
@@ -61,13 +67,13 @@ public class EditorPanel extends JPanel {
 			switch( e.getKeyCode() )
 			{
 				case KeyEvent.VK_DELETE:
-					synchronized( root )
+					synchronized( modelLock )
 					{
 						final List<IGraphNode> nodesToDelete = highlightManager.getHighlighted();
+						final IGraphNode commonParent = NodeUtils.findCommonParentPolygon( nodesToDelete );
 						if ( ! nodesToDelete.isEmpty() && NodeUtils.deleteNodes( nodesToDelete ) )
 						{
 							highlightManager.clearHighlights();
-							final IGraphNode commonParent = NodeUtils.findCommonParentPolygon( nodesToDelete );
 							if ( commonParent != null ) {
 								subtreeStructureChanged( commonParent );
 							} else {
@@ -90,14 +96,7 @@ public class EditorPanel extends JPanel {
 
 	};
 
-	protected EditMode getEditMode() {
-		if ( editModeOverride != null ) {
-			return editModeOverride;
-		}
-		return currentEditingMode;
-	}
-
-	private final MouseAdapter mouseListener = new MouseAdapter()
+	protected final class MyMouseAdapter extends MouseAdapter
 	{
 		private final Point lastPos = new Point();
 		private IGraphNode dragged = null;
@@ -107,14 +106,14 @@ public class EditorPanel extends JPanel {
 		{
 			if ( getEditMode() == EditMode.MOVE )
 			{
-				if ( dragged == null && e.getButton() == MouseEvent.BUTTON1 )
+				synchronized(modelLock)
 				{
-					synchronized(root)
+					if ( dragged == null && e.getButton() == MouseEvent.BUTTON1 )
 					{
-						IGraphNode candidate = NodeUtils.findClosestNode( root,e.getX(), e.getY() , SELECTION_RADIUS );
+						IGraphNode candidate = NodeUtils.findClosestNode( rootNode,e.getX(), e.getY() , SELECTION_RADIUS );
 						if ( candidate == null || ! candidate.getMetaData().isSelectable() )
 						{
-							candidate = NodeUtils.findContainingNode( root , e.getX() ,  e.getY() );
+							candidate = NodeUtils.findContainingNode( rootNode , e.getX() ,  e.getY() );
 						}
 						if ( candidate != null && candidate.getMetaData().isSelectable() )
 						{
@@ -126,14 +125,20 @@ public class EditorPanel extends JPanel {
 			}
 		}
 
+		public void modelChanged() {
+			synchronized( modelLock ) {
+				dragged = null;
+			}
+		}
+
 		@Override
 		public void mouseClicked(MouseEvent e)
 		{
 			if ( getEditMode() == EditMode.CREATE_POINTS && e.getButton() == MouseEvent.BUTTON1 )
 			{
-				synchronized(root)
+				synchronized(modelLock)
 				{
-					final IGraphNode candidate = NodeUtils.findClosestNode( root,e.getX(), e.getY() , SELECTION_RADIUS );
+					final IGraphNode candidate = NodeUtils.findClosestNode( rootNode,e.getX(), e.getY() , SELECTION_RADIUS );
 					if ( candidate instanceof LineNode)
 					{
 						if ( ((LineNode) candidate).split( e.getX() , e.getY() ) ) {
@@ -150,9 +155,11 @@ public class EditorPanel extends JPanel {
 		{
 			if ( getEditMode() == EditMode.MOVE )
 			{
-				if ( dragged != null && e.getButton() == MouseEvent.BUTTON1 )
-				{
-					dragged = null;
+				synchronized (modelLock) {
+					if ( dragged != null && e.getButton() == MouseEvent.BUTTON1 )
+					{
+						dragged = null;
+					}
 				}
 			}
 		}
@@ -160,11 +167,11 @@ public class EditorPanel extends JPanel {
 		@Override
 		public void mouseMoved(MouseEvent e)
 		{
-			synchronized(root)
+			synchronized(modelLock)
 			{
-				IGraphNode candidate = NodeUtils.findClosestNode( root,e.getX(), e.getY() , 15 );
+				IGraphNode candidate = NodeUtils.findClosestNode( rootNode,e.getX(), e.getY() , 15 );
 				if ( candidate == null ) {
-					candidate = NodeUtils.findContainingNode( root , e.getX() , e.getY() );
+					candidate = NodeUtils.findContainingNode( rootNode , e.getX() , e.getY() );
 				}
 
 				if ( candidate != null )
@@ -193,13 +200,13 @@ public class EditorPanel extends JPanel {
 		{
 			if ( getEditMode() == EditMode.MOVE )
 			{
-				if ( dragged != null )
+				synchronized( modelLock )
 				{
-					final int dx = e.getX() - lastPos.x;
-					final int dy = e.getY() - lastPos.y;
-
-					synchronized( root )
+					if ( dragged != null )
 					{
+						final int dx = e.getX() - lastPos.x;
+						final int dy = e.getY() - lastPos.y;
+
 						final EventType t = EventType.TRANSLATED;
 						if ( dragged instanceof LineNode )
 						{
@@ -218,7 +225,9 @@ public class EditorPanel extends JPanel {
 						}
 					}
 					lastPos.setLocation( e.getPoint() );
-					subtreeValuesChanged(dragged);
+					if ( dragged != null ) {
+						subtreeValuesChanged(dragged);
+					}
 					repaint();
 				}
 			}
@@ -226,11 +235,20 @@ public class EditorPanel extends JPanel {
 	};
 
 	protected void subtreeStructureChanged(IGraphNode changedNode) {
-		sceneObservers.forEach( o -> o.subtreeStructureChanged( changedNode ) );
+		invokeObservers( o -> o.subtreeStructureChanged( changedNode ) );
+	}
+
+	private void invokeObservers(Consumer<ISceneObserver> consumer)
+	{
+		final List<ISceneObserver> copy;
+		synchronized(sceneObservers) {
+			copy = new ArrayList<>( sceneObservers );
+		}
+		copy.forEach( ob -> consumer.accept( ob ) );
 	}
 
 	protected void subtreeValuesChanged(IGraphNode changedNode) {
-		sceneObservers.forEach( o -> o.subtreeValuesChanged( changedNode ) );
+		invokeObservers( o -> o.subtreeValuesChanged( changedNode ) );
 	}
 
 	public EditorPanel()
@@ -243,12 +261,15 @@ public class EditorPanel extends JPanel {
 		setRequestFocusEnabled(true);
 	}
 
-	public IGraphNode getRoot() {
-		return root;
-	}
-
-	public void addSceneObserver(ISceneObserver o) {
-		this.sceneObservers.add(o);
+	public void addSceneObserver(ISceneObserver o)
+	{
+		synchronized (sceneObservers) {
+			this.sceneObservers.add(o);
+		}
+		synchronized( modelLock )
+		{
+			o.modelChanged( this.rootNode );
+		}
 	}
 
 	public void setEditMode(EditMode editMode)
@@ -267,24 +288,40 @@ public class EditorPanel extends JPanel {
 		final Graphics2D graphics = (Graphics2D) g;
 		super.paint( g );
 
-		if ( pointOnLine != null ) {
-			g.setColor(Color.RED);
-			g.drawLine( 0 , (int) pointOnLine.y , getWidth() , (int) pointOnLine.y );
-			g.drawLine( (int) pointOnLine.x , 0 , (int) pointOnLine.x, getHeight() );
-		}
-
-		graphics.setColor(Color.GREEN);
-
-		synchronized(root)
+		synchronized(modelLock)
 		{
-			root.processNodeUpdates();
+			if ( pointOnLine != null ) {
+				g.setColor(Color.RED);
+				g.drawLine( 0 , (int) pointOnLine.y , getWidth() , (int) pointOnLine.y );
+				g.drawLine( (int) pointOnLine.x , 0 , (int) pointOnLine.x, getHeight() );
+			}
 
-			root.update();
+			graphics.setColor(Color.GREEN);
 
-			root.visitPreOrder( v ->
+			rootNode.processNodeUpdates();
+
+			rootNode.update();
+
+			final List<IGraphNode> highlighted = new ArrayList<>();
+
+			rootNode.visitPreOrder( node ->
 			{
-				render( v , graphics );
+				if ( node.getMetaData().isHighlighted() ) {
+					highlighted.add(node);
+					return;
+				}
+				if ( node instanceof SimplePolygon)
+				{
+					try {
+						((SimplePolygon) node).assertValid();
+					} catch(final Exception e) {
+						e.printStackTrace();
+					}
+				}
+				render( node , graphics );
 			});
+
+			highlighted.forEach( node -> render( node , graphics ) );
 		}
 	}
 
@@ -312,5 +349,29 @@ public class EditorPanel extends JPanel {
 			}
 			graphics.drawOval( (int) (p.x - 3) , (int) (p.y - 3 ) , 7 , 7 );
 		}
+	}
+
+	public void highlight(IGraphNode n) {
+		highlightManager.setHighlight( n );
+		repaint();
+	}
+
+	public void setModel(RootNode root)
+	{
+		synchronized( modelLock )
+		{
+			this.rootNode = root;
+			pointOnLine = null;
+			mouseListener.modelChanged();
+			invokeObservers( ob -> ob.modelChanged( root ) );
+		}
+		repaint();
+	}
+
+	protected EditMode getEditMode() {
+		if ( editModeOverride != null ) {
+			return editModeOverride;
+		}
+		return currentEditingMode;
 	}
 }

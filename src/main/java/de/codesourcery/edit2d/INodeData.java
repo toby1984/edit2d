@@ -33,4 +33,5 @@ public interface INodeData {
 
 	public void setHighlighted(boolean yesNo);
 
+	public void copyFrom(INodeData other);
 }
