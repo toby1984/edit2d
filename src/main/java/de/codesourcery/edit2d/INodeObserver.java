@@ -4,5 +4,7 @@ public interface INodeObserver
 {
 	public boolean invokeFor(EventType eventType);
 
-	public void nodeTranslated(EventType eventType,IGraphNode node,int dx,int dy);
+	public void nodeTranslated(EventType eventType,IGraphNode node,float dx,float dy);
+
+	public void nodeRotated(EventType eventType,IGraphNode node,float angleInDeg);
 }

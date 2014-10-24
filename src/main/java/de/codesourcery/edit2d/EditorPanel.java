@@ -96,15 +96,16 @@ public class EditorPanel extends JPanel {
 
 	};
 
+	protected Vector2 rotationCenter;
+	protected final Point lastPos = new Point();
+	protected IGraphNode dragged = null;
+
 	protected final class MyMouseAdapter extends MouseAdapter
 	{
-		private final Point lastPos = new Point();
-		private IGraphNode dragged = null;
-
 		@Override
 		public void mousePressed(MouseEvent e)
 		{
-			if ( getEditMode() == EditMode.MOVE )
+			if ( isEditMode( EditMode.MOVE ) || isEditMode( EditMode.ROTATE ) )
 			{
 				synchronized(modelLock)
 				{
@@ -117,8 +118,15 @@ public class EditorPanel extends JPanel {
 						}
 						if ( candidate != null && candidate.getMetaData().isSelectable() )
 						{
-							lastPos.setLocation( e.getPoint() );
-							dragged = candidate;
+							if ( ! isEditMode( EditMode.ROTATE ) || (isEditMode( EditMode.ROTATE ) && candidate.getMetaData().canRotate() ) )
+							{
+								if ( isEditMode( EditMode.ROTATE ) )
+								{
+									rotationCenter = new Vector2( candidate.getCenterInViewCoordinates() );
+								}
+								lastPos.setLocation( e.getPoint() );
+								dragged = candidate;
+							}
 						}
 					}
 				}
@@ -153,13 +161,20 @@ public class EditorPanel extends JPanel {
 		@Override
 		public void mouseReleased(MouseEvent e)
 		{
-			if ( getEditMode() == EditMode.MOVE )
+			if ( isEditMode( EditMode.MOVE ) || isEditMode( EditMode.ROTATE) )
 			{
-				synchronized (modelLock) {
+				boolean repaintNeeded = false;
+				synchronized (modelLock)
+				{
 					if ( dragged != null && e.getButton() == MouseEvent.BUTTON1 )
 					{
 						dragged = null;
+						rotationCenter = null;
+						repaintNeeded = true;
 					}
+				}
+				if ( repaintNeeded && isEditMode( EditMode.ROTATE) ) {
+					repaint();
 				}
 			}
 		}
@@ -198,9 +213,9 @@ public class EditorPanel extends JPanel {
 		@Override
 		public void mouseDragged(MouseEvent e)
 		{
-			if ( getEditMode() == EditMode.MOVE )
+			synchronized( modelLock )
 			{
-				synchronized( modelLock )
+				if ( isEditMode( EditMode.MOVE ) )
 				{
 					if ( dragged != null )
 					{
@@ -229,9 +244,33 @@ public class EditorPanel extends JPanel {
 					}
 					repaint();
 				}
+				else if ( isEditMode( EditMode.ROTATE ) )
+				{
+					if ( dragged != null )
+					{
+						final float lastAngle = angleInDeg( rotationCenter , new Vector2(lastPos.x,lastPos.y) );
+						final float newAngle = angleInDeg( rotationCenter , new Vector2( e.getX() , e.getY() ) );
+						final float delta = lastAngle - newAngle;
+						dragged.rotate( EventType.ROTATED , delta );
+						System.out.println("Angle: "+newAngle);
+						lastPos.setLocation( e.getPoint() );
+						repaint();
+					} else {
+						lastPos.setLocation( e.getPoint() );
+					}
+				}
 			}
 		}
 	};
+
+	protected static float angleInDeg(Vector2 origin,Vector2 point) {
+		final float deg = radToDeg( Math.atan2( point.y - origin.y , point.x - origin.x ) );
+		return deg < 0  ? -deg : 360f - deg;
+	}
+
+	protected static float radToDeg(double rad) {
+		return (float) (rad * (180d/Math.PI));
+	}
 
 	protected void subtreeStructureChanged(IGraphNode changedNode) {
 		invokeObservers( o -> o.subtreeStructureChanged( changedNode ) );
@@ -276,6 +315,8 @@ public class EditorPanel extends JPanel {
 		if (editMode == null) {
 			throw new IllegalArgumentException("editMode must not be NULL");
 		}
+		dragged = null;
+		rotationCenter = null;
 		this.editModeOverride = null;
 		this.currentEditingMode = editMode;
 		repaint();
@@ -321,6 +362,12 @@ public class EditorPanel extends JPanel {
 			});
 
 			highlighted.forEach( node -> render( node , graphics ) );
+
+			if ( isEditMode( EditMode.ROTATE) && dragged != null ) {
+
+				graphics.setColor(Color.RED);
+				graphics.drawLine( (int) rotationCenter.x , (int) rotationCenter.y , lastPos.x , lastPos.y );
+			}
 		}
 	}
 
@@ -340,7 +387,7 @@ public class EditorPanel extends JPanel {
 		}
 		else if ( t instanceof PointNode  )
 		{
-			final Vector2 p = ((PointNode) t).getPointInViewCoordinates();
+			final Vector2 p = ((PointNode) t).getCenterInViewCoordinates();
 			if ( t.getMetaData().isHighlighted() ) {
 				graphics.setColor( HIGHLIGHT_COLOR );
 			} else {
@@ -365,6 +412,10 @@ public class EditorPanel extends JPanel {
 			invokeObservers( ob -> ob.modelChanged( root ) );
 		}
 		repaint();
+	}
+
+	protected boolean isEditMode(EditMode mode) {
+		return mode.equals( getEditMode() );
 	}
 
 	protected EditMode getEditMode() {

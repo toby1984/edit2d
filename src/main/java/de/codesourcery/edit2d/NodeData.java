@@ -18,11 +18,32 @@ public class NodeData extends LightweightNodeData {
 	private float dx;
 	private float dy;
 
+	private float angleInDeg;
+
+	@Override
+	public void rotate(float angleInDeg)
+	{
+		this.angleInDeg += angleInDeg;
+		if ( this.angleInDeg >= 360.0f ) {
+			this.angleInDeg -= 360;
+		} else if ( this.angleInDeg < 0 ) {
+			this.angleInDeg += 360;
+		}
+		updateModelMatrix();
+		markDirty();
+	}
+
+	private void updateModelMatrix()
+	{
+		modelMatrix.setToTranslation( this.dx , this.dy );
+		modelMatrix.mul( new Matrix3().setToRotation( angleInDeg ) );
+	}
+
 	@Override
 	public void translate(float dx,float dy) {
 		this.dx += dx;
 		this.dy += dy;
-		modelMatrix.setToTranslation( this.dx ,  this.dy );
+		updateModelMatrix();
 		markDirty();
 	}
 
@@ -50,8 +71,8 @@ public class NodeData extends LightweightNodeData {
 	@Override
 	public void updateCombinedMatrix(Matrix3 parent)
 	{
-		this.combinedMatrix.set( modelMatrix );
-		this.combinedMatrix.mul( parent );
+		this.combinedMatrix.set( parent );
+		this.combinedMatrix.mul( modelMatrix );
 
 		this.invMatrix.set( this.combinedMatrix );
 		this.invMatrix.inv();
@@ -61,12 +82,6 @@ public class NodeData extends LightweightNodeData {
 	@Override
 	public Matrix3 getModelMatrix() {
 		return modelMatrix;
-	}
-
-	@Override
-	public void setModelMatrix(Matrix3 m) {
-		this.modelMatrix.set( m );
-		markDirty();
 	}
 
 	@Override
@@ -81,6 +96,7 @@ public class NodeData extends LightweightNodeData {
 			this.invMatrix.set( that.invMatrix );
 			this.dx = that.dx;
 			this.dy = that.dy;
+			this.angleInDeg = that.angleInDeg;
 		}
 	}
 }

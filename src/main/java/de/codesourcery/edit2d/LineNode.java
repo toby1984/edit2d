@@ -1,6 +1,7 @@
 package de.codesourcery.edit2d;
 
 import java.awt.Point;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Rectangle2D.Float;
 import java.util.ArrayList;
@@ -45,16 +46,26 @@ public class LineNode extends AbstractGraphNode
 		this( new PointNode(p0) ,new PointNode(p1) );
 	}
 
+	public LineNode(Point2D.Float p0,Point2D.Float p1) {
+		this( new PointNode(p0) ,new PointNode(p1) );
+	}
+
+	@Override
+	public Vector2 getCenterInViewCoordinates()
+	{
+		return new Vector2( p0() ).add( p1() ).scl(0.5f);
+	}
+
 	public LineNode(PointNode p0,PointNode p1) {
 		addChildren( p0, p1 );
 	}
 
 	public Vector2 p0() {
-		return ((PointNode) children.get(0)).getPointInViewCoordinates();
+		return ((PointNode) children.get(0)).getCenterInViewCoordinates();
 	}
 
 	public Vector2 p1() {
-		return ((PointNode) children.get(1)).getPointInViewCoordinates();
+		return ((PointNode) children.get(1)).getCenterInViewCoordinates();
 	}
 
 	public float length() {
@@ -62,7 +73,7 @@ public class LineNode extends AbstractGraphNode
 	}
 
 	@Override
-	public void translate(EventType eventType, int dx, int dy)
+	public void translate(EventType eventType, float dx, float dy)
 	{
 		children.forEach( node -> node.translate(eventType, dx, dy) );
 	}
@@ -115,7 +126,7 @@ public class LineNode extends AbstractGraphNode
 
 		final PointNode splitPoint1 = new PointNode( s );
 		final PointNode splitPoint2 = new PointNode( s );
-		Observers.link( new HashSet<>(Arrays.asList( EventType.values() ) ) , splitPoint1 , splitPoint2 );
+		Observers.link( new HashSet<>(Arrays.asList( EventType.PARENT_MOVED , EventType.TRANSLATED ) ) , splitPoint1 , splitPoint2 );
 
 		final PointNode end = (PointNode) child(1);
 		setChild( 1 , splitPoint1 );
@@ -141,7 +152,7 @@ public class LineNode extends AbstractGraphNode
 	}
 
 	@Override
-	public float distanceTo(int x, int y) {
+	public float distanceTo(float x, float y) {
 		return Intersector.distanceSegmentPoint(p0(), p1(), new Vector2(x,y) );
 	}
 
@@ -158,7 +169,7 @@ public class LineNode extends AbstractGraphNode
 	}
 
 	@Override
-	public boolean contains(int x, int y)
+	public boolean contains(float x, float y)
 	{
 		final Vector2 p0 = p0();
 		final Vector2 p1 = p1();

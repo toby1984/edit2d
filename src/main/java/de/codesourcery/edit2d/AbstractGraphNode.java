@@ -148,15 +148,22 @@ public abstract class AbstractGraphNode implements IGraphNode
 	}
 
 	@Override
-	public void translate(EventType eventType, int dx, int dy)
+	public void translate(EventType eventType, float dx, float dy)
 	{
-		if ( ((RootNode) getRoot()).queueUpdate( eventType , this , dx , dy ) ) {
+		if ( ((RootNode) getRoot()).queueTranslate( eventType , this , dx , dy ) ) {
 			getMetaData().translate( dx ,  dy );
 		}
 	}
 
 	@Override
-	public void set(int x, int y,boolean notifyObservers) {
+	public void rotate(EventType eventType,float angleInDeg) {
+		if ( ((RootNode) getRoot()).queueRotate( eventType , this , angleInDeg ) ) {
+			getMetaData().rotate( angleInDeg );
+		}
+	}
+
+	@Override
+	public void set(float x, float y,boolean notifyObservers) {
 		throw new RuntimeException("Unsupported operation set(int,int,boolean)");
 	}
 

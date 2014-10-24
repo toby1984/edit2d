@@ -6,6 +6,9 @@ import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
+
+import com.badlogic.gdx.math.Vector2;
 
 public class RootNode extends RegularGraphNode
 {
@@ -14,31 +17,44 @@ public class RootNode extends RegularGraphNode
 	protected static final class NodeUpdate
 	{
 		public final EventType type;
-		public int dx;
-		public int dy;
+		public Consumer<INodeObserver> task;
 
-		public NodeUpdate(EventType type,int dx, int dy) {
+		public NodeUpdate(EventType type,Consumer<INodeObserver> task) {
 			this.type = type;
-			this.dx = dx;
-			this.dy = dy;
+			this.task = task;
 		}
 
-		public void merge(EventType type,int dx, int dy) {
-			this.dx += dx;
-			this.dy += dy;
+		public void apply(INodeObserver observer) {
+			task.accept( observer );
 		}
 	}
 
-	public boolean queueUpdate(EventType type,IGraphNode n,int dx,int dy)
-	{
-		final boolean queued = internalUpdate( type , n , dx , dy );
+	@Override
+	public Vector2 getCenterInViewCoordinates() {
 
+		if ( hasNoChildren() ) {
+			return new Vector2(0,0);
+		}
+		int count = 0;
+		final Vector2 result = child(0).getCenterInViewCoordinates();
+		for ( int i = 1 ; i < getChildCount() ; i++ ) {
+			count++;
+			result.add( child(i).getCenterInViewCoordinates() );
+		}
+		result.scl( 1f / count );
+		return result;
+	}
+
+	public boolean queueTranslate(EventType type,IGraphNode n,float dx,float dy)
+	{
+		final Consumer<INodeObserver> task = observer -> observer.nodeTranslated( type ,n , dx , dy );
+		final boolean queued = queueUpdate( type , n , task );
 		if ( queued )
 		{
 			System.out.println("QUEUED: "+type+" ("+dx+","+dy+") @ "+n);
 			for ( final IGraphNode child : n.getChildren() )
 			{
-				queueUpdate( EventType.PARENT_MOVED , child , dx , dy );
+				queueTranslate( EventType.PARENT_MOVED , child , dx , dy );
 			}
 		} else {
 			System.out.println("NOT QUEUED: "+type+" ("+dx+","+dy+") @ "+n);
@@ -46,11 +62,28 @@ public class RootNode extends RegularGraphNode
 		return queued;
 	}
 
-	private boolean internalUpdate(EventType type,IGraphNode n,int dx,int dy)
+	public boolean queueRotate(EventType type,IGraphNode n,float angleInDeg)
+	{
+		final Consumer<INodeObserver> task = observer -> observer.nodeRotated( type ,n , angleInDeg);
+		final boolean queued = queueUpdate( type , n , task );
+		if ( queued )
+		{
+			System.out.println("QUEUED: "+type+" "+angleInDeg+" degrees @ "+n);
+//			for ( final IGraphNode child : n.getChildren() )
+//			{
+//				queueRotate( EventType.PARENT_MOVED , child , angleInDeg );
+//			}
+		} else {
+			System.out.println("NOT QUEUED: "+type+" "+angleInDeg+" degrees @ "+n);
+		}
+		return queued;
+	}
+
+	private boolean queueUpdate(EventType type,IGraphNode n,Consumer<INodeObserver> task)
 	{
 		final NodeUpdate existing = nodeUpdates.get(n);
 		if ( existing == null ) {
-			nodeUpdates.put( n , new NodeUpdate(type,dx,dy));
+			nodeUpdates.put( n , new NodeUpdate(type,task));
 			return true;
 		}
 		return false;
@@ -74,10 +107,9 @@ public class RootNode extends RegularGraphNode
 			}
 			System.out.println("Processing node updates on: "+key);
 
-			final IGraphNode finalKey = key;
 			visited.add( key );
 			final NodeUpdate value = nodeUpdates.get(key);
-			key.getObservers().stream().filter( ob -> ob.invokeFor( value.type ) ).forEach( observer -> observer.nodeTranslated( value.type , finalKey ,  value.dx , value.dy ) );
+			key.getObservers().stream().filter( ob -> ob.invokeFor( value.type ) ).forEach( value::apply );
 		} while ( true );
 		nodeUpdates.clear();
 	}
@@ -88,12 +120,12 @@ public class RootNode extends RegularGraphNode
 	}
 
 	@Override
-	public float distanceTo(int x, int y) {
+	public float distanceTo(float x, float y) {
 		return Float.POSITIVE_INFINITY;
 	}
 
 	@Override
-	public boolean contains(int x, int y) {
+	public boolean contains(float x, float y) {
 		return false;
 	}
 

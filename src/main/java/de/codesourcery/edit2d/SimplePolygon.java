@@ -1,6 +1,6 @@
 package de.codesourcery.edit2d;
 
-import java.awt.Point;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -13,17 +13,22 @@ import com.badlogic.gdx.math.Vector2;
 
 public class SimplePolygon extends RegularGraphNode
 {
-	public SimplePolygon(int x,int y,int width,int height)
+	public SimplePolygon(float x,float y,float width,float height)
 	{
-		final Point p0 = new Point(x,y);
-		final Point p1 = new Point(x+width,y);
-		final Point p2 = new Point(x+width,y+height);
-		final Point p3 = new Point(x,y+height);
+		final float halfWidth = width/2f;
+		final float halfHeight = width/2f;
+
+		final Point2D.Float p0 = new Point2D.Float(-halfWidth,-halfHeight);
+		final Point2D.Float p1 = new Point2D.Float(+halfWidth,-halfHeight);
+		final Point2D.Float p2 = new Point2D.Float(+halfWidth,+halfHeight);
+		final Point2D.Float p3 = new Point2D.Float(-halfWidth,+halfHeight);
 
 		final LineNode l0 = new LineNode(  p0 ,p1 );
 		final LineNode l1 = new LineNode(  p1 ,p2 );
 		final LineNode l2 = new LineNode(  p2 ,p3 );
 		final LineNode l3 = new LineNode(  p3 ,p0 );
+
+		getMetaData().translate( x , y );
 
 		addChildren( l0,l1,l2, l3 );
 
@@ -71,19 +76,21 @@ public class SimplePolygon extends RegularGraphNode
 		return new Rectangle2D.Float(xmin,ymin,xmax-xmin,ymax-ymin);
 	}
 
-	protected Vector2 center() {
-		final Rectangle2D.Float b = getBounds();
-		return new Vector2( b.x + b.width/2 , b.y + b.height/2 );
-	}
-
 	@Override
-	public float distanceTo(int x, int y)
+	public Vector2 getCenterInViewCoordinates()
 	{
-		return center().dst(x,y);
+		final Rectangle2D.Float b = getBounds();
+		return new Vector2( b.x + b.width/2f , b.y + b.height/2f );
 	}
 
 	@Override
-	public boolean contains(int x, int y)
+	public float distanceTo(float x, float y)
+	{
+		return getCenterInViewCoordinates().dst(x,y);
+	}
+
+	@Override
+	public boolean contains(float x, float y)
 	{
 		final Rectangle2D.Float rect = getBounds();
 		if ( rect.contains( x, y ) )
@@ -158,7 +165,7 @@ public class SimplePolygon extends RegularGraphNode
 
 	public void removePointsAt(PointNode p1)
 	{
-		final Vector2 p = p1.getPointInViewCoordinates();
+		final Vector2 p = p1.getCenterInViewCoordinates();
 
 		final List<PointNode> points = NodeUtils.getPointsAt( p1  , (int) p.x , (int) p.y );
 		if ( points.size() != 2 ) {
@@ -196,10 +203,10 @@ public class SimplePolygon extends RegularGraphNode
 
 		unlink( lineToRemove );
 
-		final Vector2 viewCoords = ((PointNode) successor.child(0)).getPointInViewCoordinates();
+		final Vector2 viewCoords = ((PointNode) successor.child(0)).getCenterInViewCoordinates();
 
 		predecessor.child(1).set( (int) viewCoords.x , (int) viewCoords.y , false );
-		Observers.link( new HashSet<>( Arrays.asList( EventType.values() ) ) , predecessor.child(1), successor.child(0) );
+		Observers.link( new HashSet<>( Arrays.asList( EventType.PARENT_MOVED,EventType.TRANSLATED ) ) , predecessor.child(1), successor.child(0) );
 
 		lineToRemove.remove();
 		assertValid();
@@ -244,8 +251,8 @@ public class SimplePolygon extends RegularGraphNode
 
 	private boolean isPointsAtSameLocation(PointNode p1,PointNode p2) {
 
-		final Vector2 pv1 = p1.getPointInViewCoordinates();
-		final Vector2 pv2 = p2.getPointInViewCoordinates();
+		final Vector2 pv1 = p1.getCenterInViewCoordinates();
+		final Vector2 pv2 = p2.getCenterInViewCoordinates();
 		final float dst = (float) Math.floor( pv1.dst( pv2 ) );
 		final boolean result = dst <= 1.0;
 		if ( ! result ) {

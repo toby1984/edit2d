@@ -14,27 +14,46 @@ public class LinkConstraint implements INodeObserver {
 
 	private final Set<EventType> categories = new HashSet<>();
 
-	public static enum LinkType {
+	public static enum LinkType
+	{
 		XY {
 			@Override
-			public void nodeTranslated(EventType eventType,IGraphNode node, int dx, int dy) {
+			public void nodeTranslated(EventType eventType,IGraphNode node, float dx, float dy) {
 				node.translate( eventType , dx, dy );
+			}
+
+			@Override
+			public void nodeRotated(EventType eventType, IGraphNode node,float angleInDeg)
+			{
+				node.rotate(eventType, angleInDeg);
 			}
 		},
 		X {
 			@Override
-			public void nodeTranslated(EventType eventType,IGraphNode node, int dx, int dy) {
+			public void nodeTranslated(EventType eventType,IGraphNode node, float dx, float dy) {
 				node.translate( eventType , dx, 0 );
+			}
+			@Override
+			public void nodeRotated(EventType eventType, IGraphNode node,float angleInDeg)
+			{
+				node.rotate(eventType, angleInDeg);
 			}
 		},
 		Y {
 			@Override
-			public void nodeTranslated(EventType eventType,IGraphNode node, int dx, int dy) {
+			public void nodeTranslated(EventType eventType,IGraphNode node, float dx, float dy) {
 				node.translate( eventType , 0, dy );
+			}
+			@Override
+			public void nodeRotated(EventType eventType, IGraphNode node,float angleInDeg)
+			{
+				node.rotate(eventType, angleInDeg);
 			}
 		};
 
-		public abstract void nodeTranslated(EventType eventType,IGraphNode node, int dx, int dy);
+		public abstract void nodeTranslated(EventType eventType,IGraphNode node, float dx, float dy);
+
+		public abstract void nodeRotated(EventType eventType, IGraphNode node, float angleInDeg);
 	}
 
 	public static boolean areXYLinked(IGraphNode n1,IGraphNode n2)
@@ -117,12 +136,22 @@ public class LinkConstraint implements INodeObserver {
 	}
 
 	@Override
-	public void nodeTranslated(EventType eventType,IGraphNode node, int dx, int dy)
+	public void nodeTranslated(EventType eventType,IGraphNode node, float dx, float dy)
 	{
 		for ( final IGraphNode n : nodes ) {
 			if ( n != node ) {
 				System.out.println( this.type+" translates "+n+" by "+dx+","+dy);
 				type.nodeTranslated( eventType, n , dx , dy );
+			}
+		}
+	}
+
+	@Override
+	public void nodeRotated(EventType eventType, IGraphNode node,float angleInDeg) {
+		for ( final IGraphNode n : nodes ) {
+			if ( n != node ) {
+				System.out.println( this.type+" rotates "+n+" by "+angleInDeg+" degrees");
+				type.nodeRotated( eventType, n , angleInDeg);
 			}
 		}
 	}

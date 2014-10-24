@@ -1,6 +1,7 @@
 package de.codesourcery.edit2d;
 
 import java.awt.Point;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.Collections;
 import java.util.List;
@@ -17,33 +18,17 @@ public class PointNode extends AbstractGraphNode
 		public Vector2 viewToModel(Vector2 v) {
 			return new Vector2(v);
 		}
-
-//		@Override
-//		public Vector2 viewToModel(Vector2 v) {
-//			 return getParent().getMetaData().viewToModel( v );
-//		}
-//
-//		@Override
-//		public Vector2 modelToView(Vector2 v) {
-//			return getParent().getMetaData().modelToView( v );
-//		}
-//
-//		@Override
-//		public Matrix3 getModelMatrix() {
-//			return getParent().getMetaData().getModelMatrix();
-//		}
-//
-//		@Override
-//		public Matrix3 getCombinedMatrix() {
-//			return getParent().getMetaData().getCombinedMatrix();
-//		}
 	};
 
 	public PointNode(Point p) {
 		this(p.x,p.y);
 	}
 
-	public PointNode(int x,int y) {
+	public PointNode(Point2D.Float p) {
+		this(p.x,p.y);
+	}
+
+	public PointNode(float x,float y) {
 		this.p.set(x,y);
 	}
 
@@ -57,19 +42,19 @@ public class PointNode extends AbstractGraphNode
 	}
 
 	@Override
-	public float distanceTo(int x, int y) {
-		return getPointInViewCoordinates().dst( x , y);
+	public float distanceTo(float x, float y) {
+		return getCenterInViewCoordinates().dst( x , y);
 	}
 
-	public Vector2 getPointInViewCoordinates()
-	{
+	@Override
+	public Vector2 getCenterInViewCoordinates() {
 		return new Vector2(p).mul( getParent().getMetaData().getCombinedMatrix() );
 	}
 
 	@Override
-	public boolean contains(int x, int y) {
-		final Vector2 view = getPointInViewCoordinates();
-		return x == (int) view.x && y == (int) view.y;
+	public boolean contains(float  x, float y) {
+		final Vector2 view = getCenterInViewCoordinates();
+		return Math.floor( view.dst( x ,  y ) ) <= 1f;
 	}
 
 	@Override
@@ -82,10 +67,10 @@ public class PointNode extends AbstractGraphNode
 	}
 
 	@Override
-	public void translate(EventType eventType, int dx, int dy)
+	public void translate(EventType eventType, float dx, float dy)
 	{
 		final IGraphNode root = getRoot();
-		if ( ((RootNode) root).queueUpdate( eventType , this , dx , dy ) )
+		if ( ((RootNode) root).queueTranslate( eventType , this , dx , dy ) )
 		{
 			System.out.println("*** Translating point by "+dx+","+dy);
 			this.p.x += dx;
@@ -96,12 +81,12 @@ public class PointNode extends AbstractGraphNode
 	}
 
 	@Override
-	public void set(int x, int y,boolean notifyObservers)
+	public void set(float x, float y,boolean notifyObservers)
 	{
-		final Vector2 pv = getPointInViewCoordinates();
+		final Vector2 pv = getCenterInViewCoordinates();
 
-		final int dx = (int) (x - pv.x);
-		final int dy = (int) (y - pv.y);
+		final float dx = (x - pv.x);
+		final float dy = (y - pv.y);
 
 		if ( notifyObservers ) {
 			this.translate(EventType.TRANSLATED,dx,dy);
@@ -122,7 +107,7 @@ public class PointNode extends AbstractGraphNode
 
 	@Override
 	public Rectangle2D.Float getBounds() {
-		final Vector2 p = getPointInViewCoordinates();
+		final Vector2 p = getCenterInViewCoordinates();
 		return new Rectangle2D.Float( p.x , p.y , 1 , 1 );
 	}
 }

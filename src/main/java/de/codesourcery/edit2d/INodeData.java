@@ -7,6 +7,8 @@ public interface INodeData {
 
 	public void translate(float dx, float dy);
 
+	public void rotate(float angleInDeg);
+
 	public void set(float x,float y);
 
 	public boolean isDirty();
@@ -23,11 +25,13 @@ public interface INodeData {
 
 	public Matrix3 getCombinedMatrix();
 
-	public void setModelMatrix(Matrix3 m);
-
 	public void setSelectable(boolean isSelectable);
 
 	public boolean isSelectable();
+
+	public boolean canRotate();
+
+	public void setCanRotate(boolean yesNo);
 
 	public boolean isHighlighted();
 

@@ -12,7 +12,7 @@ public abstract class LightweightNodeData implements INodeData {
 
 	public static enum Flag
 	{
-		SELECTABLE(1),DIRTY(2),HIGHLIGHTED(4);
+		SELECTABLE(1),DIRTY(2),HIGHLIGHTED(4),CAN_ROTATE(8);
 
 		private final int bitMask;
 
@@ -37,7 +37,7 @@ public abstract class LightweightNodeData implements INodeData {
 	 * Make sure to adjust copyFrom(INodeData) when adding fields here
 	 * !!!!!!!!!!!!!!!!!!!!!!!!!
 	 */
-	protected int flags = Flag.SELECTABLE.set(0);
+	protected int flags = Flag.CAN_ROTATE.set( Flag.SELECTABLE.set(0) );
 
 	protected final void setFlag(Flag flag,boolean onOff) {
 		if ( onOff ) {
@@ -89,6 +89,16 @@ public abstract class LightweightNodeData implements INodeData {
 	}
 
 	@Override
+	public void setCanRotate(boolean yesNo) {
+		setFlag(Flag.CAN_ROTATE , yesNo);
+	}
+
+	@Override
+	public boolean canRotate() {
+		return isSet(Flag.CAN_ROTATE);
+	}
+
+	@Override
 	public final boolean isHighlighted() {
 		return isSet(Flag.HIGHLIGHTED);
 	}
@@ -114,13 +124,13 @@ public abstract class LightweightNodeData implements INodeData {
 	}
 
 	@Override
-	public void setModelMatrix(Matrix3 m) {
-		throw new UnsupportedOperationException("setModelMatrix() not implemented");
+	public void translate(float dx, float dy) {
+		throw new UnsupportedOperationException("translate() not implemented");
 	}
 
 	@Override
-	public void translate(float dx, float dy) {
-		throw new UnsupportedOperationException("translate() not implemented");
+	public void rotate(float angleInDeg) {
+		throw new UnsupportedOperationException("rotate() not implemented");
 	}
 
 	@Override

@@ -67,13 +67,17 @@ public class Main extends JFrame {
 		final JRadioButton button2 = new JRadioButton("Create points" , true );
 		button2.addActionListener( ev -> editor.setEditMode( EditMode.CREATE_POINTS) );
 
-		final JRadioButton button3 = new JRadioButton("DRAW" , true );
-		button3.addActionListener( ev -> editor.setEditMode( EditMode.DRAW ) );
+		final JRadioButton button3 = new JRadioButton("Rotate" , true );
+		button3.addActionListener( ev -> editor.setEditMode( EditMode.ROTATE ) );
+
+		final JRadioButton button4 = new JRadioButton("Draw" , true );
+		button4.addActionListener( ev -> editor.setEditMode( EditMode.DRAW ) );
 
 		final ButtonGroup group = new ButtonGroup();
 		group.add( button1 );
 		group.add( button2 );
 		group.add( button3 );
+		group.add( button4 );
 
 		final JPanel buttonPanel = new JPanel();
 
@@ -81,11 +85,12 @@ public class Main extends JFrame {
 		buttonPanel.add( button1 );
 		buttonPanel.add( button2 );
 		buttonPanel.add( button3 );
+		buttonPanel.add( button4 );
 
 		final JButton resetButton = new JButton("Reset");
 		resetButton.addActionListener( ev -> editor.setModel( createModel() ) );
 
-		disableFocus(buttonPanel,button1,button2,button3,debugPanel,resetButton);
+		disableFocus(buttonPanel,button1,button2,button3,button4,debugPanel,resetButton);
 		buttonPanel.add( resetButton );
 
 		getContentPane().add( buttonPanel , cnstrs );

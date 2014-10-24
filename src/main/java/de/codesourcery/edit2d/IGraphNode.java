@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import com.badlogic.gdx.math.Matrix3;
+import com.badlogic.gdx.math.Vector2;
 
 public interface IGraphNode
 {
@@ -53,17 +54,21 @@ public interface IGraphNode
 
 	public void addChildren(IGraphNode n1,IGraphNode... additional);
 
-	public float distanceTo(int x,int y);
+	public float distanceTo(float x,float y);
+
+	public Vector2 getCenterInViewCoordinates();
 
 	public void visitPreOrder(INodeVisitor v);
 
 	public void visitPostOrder(INodeVisitor v);
 
-	public void translate(EventType eventType,int dx, int dy);
+	public void translate(EventType eventType,float dx, float dy);
 
-	public void set(int x,int y , boolean notifyObservers);
+	public void rotate(EventType eventType,float angleInDeg);
 
-	public boolean contains(int x,int y);
+	public void set(float x,float y , boolean notifyObservers);
+
+	public boolean contains(float x,float y);
 
 	public INodeData getMetaData();
 
