@@ -121,7 +121,7 @@ public class SceneGraphDebugPanel extends JPanel implements ISceneObserver
 				final Component result = super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
 				if ( value instanceof IGraphNode && !(value instanceof PointNode)) {
 					final IGraphNode node = (IGraphNode) value;
-					setToolTipText( "<html><body>"+NodeUtils.matrixToString( node.getMetaData().getCombinedMatrix() ).replace("\n", "<br>")+"</body></html>" );
+					setToolTipText( "<html><body>"+NodeUtils.matrixToString( node.getCombinedMatrix() ).replace("\n", "<br>")+"</body></html>" );
 				} else {
 					setToolTipText(null);
 				}

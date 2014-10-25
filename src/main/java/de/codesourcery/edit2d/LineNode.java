@@ -17,29 +17,6 @@ public class LineNode extends AbstractGraphNode
 {
 	private static final float EPSILON = 0.0001f;
 
-	private final LightweightNodeData metaData = new LightweightNodeData()
-	{
-		@Override
-		public Vector2 viewToModel(Vector2 v) {
-			return getParent().getMetaData().viewToModel( v );
-		}
-
-		@Override
-		public Vector2 modelToView(Vector2 v) {
-			return getParent().getMetaData().modelToView( v );
-		}
-
-		@Override
-		public Matrix3 getModelMatrix() {
-			return getParent().getMetaData().getModelMatrix();
-		}
-
-		@Override
-		public Matrix3 getCombinedMatrix() {
-			return getParent().getMetaData().getCombinedMatrix();
-		}
-	};
-
 	private final List<IGraphNode> children = new ArrayList<>();
 
 	public LineNode(Point p0,Point p1) {
@@ -122,7 +99,7 @@ public class LineNode extends AbstractGraphNode
 			return false;
 		}
 
-		final Vector2 s = getMetaData().viewToModel( sp );
+		final Vector2 s = viewToModel( sp );
 
 		final PointNode splitPoint1 = new PointNode( s );
 		final PointNode splitPoint2 = new PointNode( s );
@@ -133,7 +110,7 @@ public class LineNode extends AbstractGraphNode
 
 		final LineNode newLine = new LineNode( splitPoint2 , end  );
 
-		newLine.getMetaData().copyFrom( getMetaData() );
+		newLine.copyMetaDataFrom( this );
 
 		getParent().insertChild( getParent().indexOf( this )+1 , newLine );
 
@@ -191,15 +168,45 @@ public class LineNode extends AbstractGraphNode
 	}
 
 	@Override
-	public INodeData getMetaData() {
-		return metaData;
-	}
-
-	@Override
 	public void update(Matrix3 matrix) {
 	}
 
 	@Override
 	public void update() {
+	}
+
+	@Override
+	public Vector2 modelToView(Vector2 v) {
+		return getParent().modelToView( v );
+	}
+
+	@Override
+	public Vector2 viewToModel(Vector2 v) {
+		return getParent().viewToModel( v );
+	}
+
+	@Override
+	public Matrix3 getModelMatrix() {
+		return getParent().getModelMatrix();
+	}
+
+	@Override
+	public void updateCombinedMatrix(Matrix3 parent) {
+	}
+
+	@Override
+	public Matrix3 getCombinedMatrix() {
+		return getParent().getCombinedMatrix();
+	}
+
+	@Override
+	public void translate(float dx, float dy)
+	{
+		getChildren().forEach( c -> c.translate(dx, dy ) );
+	}
+
+	@Override
+	public void rotate(float angleInDeg) {
+		// makes no sense to rotate
 	}
 }

@@ -12,18 +12,6 @@ import com.badlogic.gdx.math.Vector2;
 public class PointNode extends AbstractGraphNode
 {
 	public final Vector2 p = new Vector2();
-	private final LightweightNodeData metaData = new LightweightNodeData() {
-
-		@Override
-		public Vector2 viewToModel(Vector2 v) {
-			return getParent().getMetaData().viewToModel( v );
-		}
-
-		@Override
-		public Vector2 modelToView(Vector2 v) {
-			return getParent().getMetaData().modelToView( v );
-		}
-	};
 
 	public PointNode(Point p) {
 		this(p.x,p.y);
@@ -43,7 +31,7 @@ public class PointNode extends AbstractGraphNode
 
 	@Override
 	public String toString() {
-		return "Point #"+nodeId+" "+p+" ( "+getMetaData()+")";
+		return "Point #"+nodeId+" "+p;
 	}
 
 	@Override
@@ -53,7 +41,7 @@ public class PointNode extends AbstractGraphNode
 
 	@Override
 	public Vector2 getCenterInViewCoordinates() {
-		return new Vector2(p).mul( getParent().getMetaData().getCombinedMatrix() );
+		return new Vector2(p).mul( getParent().getCombinedMatrix() );
 	}
 
 	@Override
@@ -102,11 +90,6 @@ public class PointNode extends AbstractGraphNode
 	}
 
 	@Override
-	public INodeData getMetaData() {
-		return metaData;
-	}
-
-	@Override
 	public void update(Matrix3 matrix) {
 	}
 
@@ -114,5 +97,47 @@ public class PointNode extends AbstractGraphNode
 	public Rectangle2D.Float getBounds() {
 		final Vector2 p = getCenterInViewCoordinates();
 		return new Rectangle2D.Float( p.x , p.y , 1 , 1 );
+	}
+
+	@Override
+	public Vector2 modelToView(Vector2 v) {
+		return getParent().modelToView(v);
+	}
+
+	@Override
+	public Vector2 viewToModel(Vector2 v) {
+		return getParent().viewToModel(v);
+	}
+
+	@Override
+	public Matrix3 getModelMatrix() {
+		return getParent().getModelMatrix();
+	}
+
+	@Override
+	public void updateCombinedMatrix(Matrix3 parent) {
+	}
+
+	@Override
+	public Matrix3 getCombinedMatrix() {
+		return getParent().getCombinedMatrix();
+	}
+
+	@Override
+	public void translate(float dx, float dy)
+	{
+		this.p.x += dx;
+		this.p.y += dy;
+	}
+
+	@Override
+	public void rotate(float angleInDeg) {
+		// rotating a point around it's origin has no effect
+	}
+
+	@Override
+	public void set(float x, float y) {
+		this.p.x = x;
+		this.p.y = y;
 	}
 }

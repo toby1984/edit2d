@@ -28,7 +28,7 @@ public class SimplePolygon extends RegularGraphNode
 		final LineNode l2 = new LineNode(  p2 ,p3 );
 		final LineNode l3 = new LineNode(  p3 ,p0 );
 
-		getMetaData().translate( x , y );
+		translate( x , y );
 
 		addChildren( l0,l1,l2, l3 );
 

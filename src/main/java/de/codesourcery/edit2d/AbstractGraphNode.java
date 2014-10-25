@@ -7,14 +7,50 @@ import com.badlogic.gdx.math.Matrix3;
 
 public abstract class AbstractGraphNode implements IGraphNode
 {
+	protected static final Matrix3 MAT_IDENTITY = new Matrix3();
+
 	protected final List<INodeObserver> observers = new ArrayList<>();
 	protected IGraphNode parent;
 
 	protected final long nodeId = NODE_ID.incrementAndGet();
 
+	protected int flags = Flag.CAN_ROTATE.set( Flag.SELECTABLE.set(0) );
+
 	@Override
-	public final boolean isDirty() {
-		return getMetaData().isDirty();
+	public final AbstractGraphNode setFlag(Flag flag,boolean onOff) {
+		if ( onOff ) {
+			setFlag(flag);
+		} else {
+			clearFlag(flag);
+		}
+		return this;
+	}
+
+	@Override
+	public final boolean hasFlag(Flag flag) {
+		return flag.isSet( this.flags );
+	}
+
+	@Override
+	public final AbstractGraphNode setFlag(Flag flag) {
+		flags = flag.set( flags );
+		return this;
+	}
+
+	@Override
+	public final AbstractGraphNode clearFlag(Flag flag)
+	{
+		flags = flag.clear( flags );
+		return this;
+	}
+
+	protected final boolean isSet(Flag flag) {
+		return flag.isSet( this.flags );
+	}
+
+	@Override
+	public final boolean requiresUpdate() {
+		return hasFlag(Flag.DIRTY);
 	}
 
 	@Override
@@ -136,9 +172,9 @@ public abstract class AbstractGraphNode implements IGraphNode
 	@Override
 	public void update()
 	{
-		if ( isDirty() )
+		if ( requiresUpdate() )
 		{
-			update( getParent().getMetaData().getCombinedMatrix() );
+			update( getParent().getCombinedMatrix() );
 		} else {
 			for ( final IGraphNode child : getChildren() )
 			{
@@ -151,14 +187,14 @@ public abstract class AbstractGraphNode implements IGraphNode
 	public void translate(EventType eventType, float dx, float dy)
 	{
 		if ( ((RootNode) getRoot()).queueTranslate( eventType , this , dx , dy ) ) {
-			getMetaData().translate( dx ,  dy );
+			translate( dx ,  dy );
 		}
 	}
 
 	@Override
 	public void rotate(EventType eventType,float angleInDeg) {
 		if ( ((RootNode) getRoot()).queueRotate( eventType , this , angleInDeg ) ) {
-			getMetaData().rotate( angleInDeg );
+			rotate( angleInDeg );
 		}
 	}
 
@@ -168,13 +204,23 @@ public abstract class AbstractGraphNode implements IGraphNode
 	}
 
 	@Override
+	public void set(float x, float y) {
+		throw new UnsupportedOperationException("set(float,float) not supported on "+this);
+	}
+
+	@Override
 	public void update(Matrix3 matrix)
 	{
 		System.out.println("update(): Called on "+this+" with "+NodeUtils.matrixToString(matrix));
-		getMetaData().updateCombinedMatrix( matrix );
+		updateCombinedMatrix( matrix );
 		for ( final IGraphNode child : getChildren() )
 		{
-			child.update( getMetaData().getCombinedMatrix() );
+			child.update( getCombinedMatrix() );
 		}
+	}
+
+	@Override
+	public void copyMetaDataFrom(IGraphNode other) {
+		this.flags = ((AbstractGraphNode) other).flags;
 	}
 }

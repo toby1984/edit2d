@@ -3,6 +3,8 @@ package de.codesourcery.edit2d;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.codesourcery.edit2d.IGraphNode.Flag;
+
 public class HighlightManager {
 
 	private final List<IGraphNode> highlighted = new ArrayList<>();
@@ -21,7 +23,7 @@ public class HighlightManager {
 			}
 			clearHighlights();
 		}
-		n.visitPostOrder( node -> node.getMetaData().setHighlighted(true) );
+		n.visitPostOrder( node -> node.setFlag(Flag.HIGHLIGHTED) );
 		highlighted.add( n );
 		return true;
 	}
@@ -36,7 +38,7 @@ public class HighlightManager {
 		{
 			for ( final IGraphNode current : highlighted )
 			{
-				current.visitPostOrder( node -> node.getMetaData().setHighlighted(false) );
+				current.visitPostOrder( node -> node.clearFlag(Flag.HIGHLIGHTED) );
 			}
 			highlighted.clear();
 			return true;

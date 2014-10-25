@@ -17,6 +17,8 @@ import javax.swing.JPanel;
 
 import com.badlogic.gdx.math.Vector2;
 
+import de.codesourcery.edit2d.IGraphNode.Flag;
+
 public class EditorPanel extends JPanel {
 
 	private final Object modelLock = new Object();
@@ -112,13 +114,13 @@ public class EditorPanel extends JPanel {
 					if ( dragged == null && e.getButton() == MouseEvent.BUTTON1 )
 					{
 						IGraphNode candidate = NodeUtils.findClosestNode( rootNode,e.getX(), e.getY() , SELECTION_RADIUS );
-						if ( candidate == null || ! candidate.getMetaData().isSelectable() )
+						if ( candidate == null || ! candidate.hasFlag(Flag.SELECTABLE) )
 						{
 							candidate = NodeUtils.findContainingNode( rootNode , e.getX() ,  e.getY() );
 						}
-						if ( candidate != null && candidate.getMetaData().isSelectable() )
+						if ( candidate != null && candidate.hasFlag(Flag.SELECTABLE) )
 						{
-							if ( ! isEditMode( EditMode.ROTATE ) || (isEditMode( EditMode.ROTATE ) && candidate.getMetaData().canRotate() ) )
+							if ( ! isEditMode( EditMode.ROTATE ) || (isEditMode( EditMode.ROTATE ) && candidate.hasFlag(Flag.CAN_ROTATE) ) )
 							{
 								if ( isEditMode( EditMode.ROTATE ) )
 								{
@@ -240,8 +242,8 @@ public class EditorPanel extends JPanel {
 						Vector2 oldV = new Vector2(lastPos.x,lastPos.y);
 						Vector2 newV = new Vector2(e.getX(),e.getY());
 
-						oldV = dragged.getMetaData().viewToModel( oldV );
-						newV = dragged.getMetaData().viewToModel( newV );
+						oldV = dragged.viewToModel( oldV );
+						newV = dragged.viewToModel( newV );
 
 						dx= newV.x - oldV.x;
 						dy= newV.y - oldV.y;
@@ -356,7 +358,7 @@ public class EditorPanel extends JPanel {
 
 			rootNode.visitPreOrder( node ->
 			{
-				if ( node.getMetaData().isHighlighted() ) {
+				if ( node.hasFlag(Flag.HIGHLIGHTED) ) {
 					highlighted.add(node);
 					return;
 				}
@@ -398,7 +400,7 @@ public class EditorPanel extends JPanel {
 		else if ( t instanceof PointNode  )
 		{
 			final Vector2 p = ((PointNode) t).getCenterInViewCoordinates();
-			if ( t.getMetaData().isHighlighted() ) {
+			if ( t.hasFlag(Flag.HIGHLIGHTED) ) {
 				graphics.setColor( HIGHLIGHT_COLOR );
 			} else {
 				graphics.setColor( EditorPanel.POINT_COLOR );

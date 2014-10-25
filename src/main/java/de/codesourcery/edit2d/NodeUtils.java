@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 
 import com.badlogic.gdx.math.Matrix3;
 
+import de.codesourcery.edit2d.IGraphNode.Flag;
+
 public class NodeUtils {
 
 	public static IGraphNode findClosestNode(IGraphNode node,int x, int y, float minimumDistance)
@@ -74,7 +76,7 @@ public class NodeUtils {
 	{
 		IGraphNode current = n;
 		while ( current != null ) {
-			if ( current.getMetaData().isHighlighted() ) {
+			if ( current.hasFlag(Flag.HIGHLIGHTED) ) {
 				return true;
 			}
 			current = current.getParent();

@@ -1,78 +1,91 @@
 package de.codesourcery.edit2d;
 
 import java.awt.geom.Rectangle2D;
-import java.util.List;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Vector2;
 
-public interface IGraphNode
+public interface IGraphNode extends ITreeNode,IObservable
 {
 	public static final AtomicLong NODE_ID = new AtomicLong(0);
 
-	public interface INodeVisitor
+	public static enum Flag
 	{
-		public void visit(IGraphNode n);
+		SELECTABLE(1),DIRTY(2),HIGHLIGHTED(4),CAN_ROTATE(8);
+
+		private final int bitMask;
+
+		private Flag(int bitMask) {
+			this.bitMask = bitMask;
+		}
+
+		public int set(int input) {
+			return input | bitMask;
+		}
+
+		public int clear(int input) {
+			return input & ~bitMask;
+		}
+
+		public boolean isSet(int input) {
+			return (input&bitMask) != 0;
+		}
+
+		public static String toString(int flags) {
+			return Arrays.stream( Flag.values() ).filter( flag -> flag.isSet( flags ) ).map( Flag::name ).collect( Collectors.joining("|"));
+		}
 	}
 
-	public boolean isDirty();
+    // projections
+	public Vector2 modelToView(Vector2 v);
 
-	public void addObserver(INodeObserver o);
+	public Vector2 viewToModel(Vector2 v);
 
-	public void removeObserver(INodeObserver o);
+	public Matrix3 getModelMatrix();
 
+	public void updateCombinedMatrix(Matrix3 parent);
+
+	public Matrix3 getCombinedMatrix();
+
+	// flags
+	public boolean hasFlag(Flag flag);
+
+	public IGraphNode setFlag(Flag flag);
+
+	public IGraphNode clearFlag(Flag flag);
+
+	public IGraphNode setFlag(Flag flag,boolean onOff);
+
+	// metadata functions
 	public void update();
 
-	public List<IGraphNode> getChildren();
+	public boolean requiresUpdate();
 
-	public IGraphNode getParent();
+	public void update(Matrix3 matrix);
 
-	public void setParent(IGraphNode parent);
+	public void copyMetaDataFrom(IGraphNode other);
 
-	public IGraphNode child(int index);
-
-	public void insertChild(int index,IGraphNode n);
-
-	public void setChild(int index,IGraphNode n);
-
-	public int getChildCount();
-
-	public boolean hasChildren();
-
-	public boolean hasNoChildren();
-
-	public void removeChild(IGraphNode child);
-
-	public void remove();
-
-	public int indexOf(IGraphNode child);
-
-	public IGraphNode getRoot();
-
-	public List<INodeObserver> getObservers();
-
-	public void addChildren(IGraphNode n1,IGraphNode... additional);
-
+	// 2D functions
 	public float distanceTo(float x,float y);
 
 	public Vector2 getCenterInViewCoordinates();
 
-	public void visitPreOrder(INodeVisitor v);
+	public void translate(float dx, float dy);
 
-	public void visitPostOrder(INodeVisitor v);
+	public void rotate(float angleInDeg);
 
 	public void translate(EventType eventType,float dx, float dy);
 
 	public void rotate(EventType eventType,float angleInDeg);
 
+	public void set(float x,float y);
+
 	public void set(float x,float y , boolean notifyObservers);
 
 	public boolean contains(float x,float y);
-
-	public INodeData getMetaData();
-
-	public void update(Matrix3 matrix);
 
 	public Rectangle2D.Float getBounds();
 }
