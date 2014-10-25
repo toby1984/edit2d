@@ -2,11 +2,8 @@ package de.codesourcery.edit2d;
 
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import com.badlogic.gdx.math.Intersector;
 import com.badlogic.gdx.math.Vector2;
@@ -32,26 +29,10 @@ public class SimplePolygon extends RegularGraphNode
 
 		addChildren( l0,l1,l2, l3 );
 
-		// link start/end points of consecutive lines
-		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l0.child( 1 ) , l1.child( 0 ) );
-		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l1.child( 1 ) , l2.child( 0 ) );
-		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l2.child( 1 ) , l3.child( 0 ) );
-		Observers.link( asSet(EventType.TRANSLATED , EventType.PARENT_MOVED ) , l3.child( 1 ) , l0.child( 0 ) );
-
 		assertValid();
 	}
 
 	public SimplePolygon() {
-	}
-
-	private static Set<EventType> asSet(EventType t1,EventType...eventTypes)
-	{
-		final Set<EventType> result = new HashSet<>();
-		result.add(t1);
-		if ( eventTypes != null ) {
-			result.addAll(Arrays.asList( eventTypes ) );
-		}
-		return result;
 	}
 
 	@Override
@@ -201,12 +182,9 @@ public class SimplePolygon extends RegularGraphNode
 		// TODO: The following code relies on the fact that lines in a polygon are always
 		// TODO: linked in a clock-wise fashion
 
-		unlink( lineToRemove );
-
 		final Vector2 viewCoords = ((PointNode) successor.child(0)).getCenterInViewCoordinates();
 
-		predecessor.child(1).set( (int) viewCoords.x , (int) viewCoords.y , false );
-		Observers.link( new HashSet<>( Arrays.asList( EventType.PARENT_MOVED,EventType.TRANSLATED ) ) , predecessor.child(1), successor.child(0) );
+		predecessor.child(1).set( viewCoords.x , viewCoords.y );
 
 		lineToRemove.remove();
 		assertValid();
@@ -231,21 +209,6 @@ public class SimplePolygon extends RegularGraphNode
 			if ( ! isPointsAtSameLocation( (PointNode) current.child(1), (PointNode) next.child(0) ) ) {
 				throw new IllegalStateException("End point of line #"+i+" is not the same as end point of line #"+(i+1));
 			}
-
-			if ( current.child(1).getObservers().size() != 1 ) { // TODO: Check for debugging stuff, remove when done ... will fail when user is able to create arbitrary links between points
-				throw new IllegalStateException("End point of line #"+i+" has invalid observer count "+current.child(1).getObservers().size()+" , expected exactly 2. "+current);
-			}
-
-			if ( current.child(0).getObservers().size() != 1 ) { // TODO: Check for debugging stuff, remove when done ... will fail when user is able to create arbitrary links between points
-				throw new IllegalStateException("Starting point of line #"+i+" has invalid observer count "+current.child(0).getObservers().size()+" , expected exactly 2. "+current);
-			}
-
-			if ( ! LinkConstraint.areXYLinked( previous.child(1) , current.child(0) ) ) {
-				throw new IllegalStateException("Line #"+i+" is broken: End point of line "+previous+" is not linked with starting point of line "+current);
-			}
-			if ( ! LinkConstraint.areXYLinked( current.child(1) , next.child(0) ) ) {
-				throw new IllegalStateException("Line #"+i+" is broken: End point of line "+current+" is not linked with starting point of line "+next);
-			}
 		}
 	}
 
@@ -259,12 +222,6 @@ public class SimplePolygon extends RegularGraphNode
 			System.err.println("distance: "+dst);
 		}
 		return result;
-	}
-
-	private void unlink(LineNode lineToRemove) {
-		Observers.unlink( lineToRemove.child(0) );
-		Observers.unlink( lineToRemove.child(1) );
-		Observers.unlink( lineToRemove );
 	}
 
 	private LineNode successor(LineNode n) {
@@ -286,5 +243,114 @@ public class SimplePolygon extends RegularGraphNode
 	@Override
 	public String toString() {
 		return "SimplePolygon #"+nodeId;
+	}
+
+	@Override
+	public ITranslationHandle getTranslationHandle(float viewX, float viewY,float pickRadius)
+	{
+		final ITranslationHandle handle = super.getTranslationHandle(viewX,viewY,pickRadius);
+		if ( handle == null && contains(viewX,viewY ) )
+		{
+			return new ITranslationHandle() {
+
+				@Override
+				public float distanceTo(float viewX, float viewY) {
+					return SimplePolygon.this.distanceTo(viewX,viewY);
+				}
+
+				@Override
+				public IGraphNode getNode() { return SimplePolygon.this; }
+
+				@Override
+				public void translate(float dx, float dy) {
+					SimplePolygon.this.translate(dx,dy);
+				}
+			};
+		}
+		if ( handle != null )
+		{
+			if ( handle.getNode() instanceof PointNode)
+			{
+				// find companion point
+				final LineNode line = (LineNode) handle.getNode().getParent();
+				final int pointIdx = line.indexOf( handle.getNode() );
+				PointNode companion;
+				if ( pointIdx == 0 ) {
+					companion = (PointNode) predecessor( line ).child(1);
+				} else if ( pointIdx == 1 ) {
+					companion = (PointNode) successor( line ).child(0);
+				} else {
+					throw new RuntimeException("Internal error");
+				}
+				return new ITranslationHandle() {
+
+					@Override
+					public void translate(float dx, float dy) {
+						handle.translate(dx, dy);
+						companion.translate(dx,dy);
+					}
+
+					@Override
+					public float distanceTo(float viewX, float viewY) {
+						return handle.distanceTo(viewX, viewY);
+					}
+
+					@Override
+					public IGraphNode getNode() {
+						return handle.getNode();
+					}
+				};
+
+			}
+			else if ( handle.getNode() instanceof LineNode)
+			{
+				final LineNode succ = successor( (LineNode) handle.getNode() );
+				final LineNode pred = predecessor( (LineNode) handle.getNode() );
+				return new ITranslationHandle() {
+
+					@Override
+					public void translate(float dx, float dy) {
+						handle.translate(dx, dy);
+						pred.child(1).translate(dx,dy);
+						succ.child(0).translate(dx,dy);
+					}
+
+					@Override
+					public float distanceTo(float viewX, float viewY) {
+						return handle.distanceTo(viewX, viewY);
+					}
+
+					@Override
+					public IGraphNode getNode() {
+						return handle.getNode();
+					}
+				};
+			}
+		}
+		return handle;
+	}
+
+	@Override
+	public IRotationHandle getRotationHandle(float viewX, float viewY,float pickRadius)
+	{
+		if ( contains(viewX, viewY) )
+		{
+			return new IRotationHandle()
+			{
+				@Override
+				public void rotate(float deltaAngleInDeg) {
+					SimplePolygon.this.rotate( deltaAngleInDeg );
+				}
+
+				@Override
+				public float distanceTo(float viewX, float viewY) {
+					return SimplePolygon.this.distanceTo(viewX, viewY);
+				}
+
+				@Override
+				public IGraphNode getNode() { return SimplePolygon.this; }
+			};
+		}
+		return null;
 	}
 }

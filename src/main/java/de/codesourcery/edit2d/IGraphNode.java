@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import com.badlogic.gdx.math.Matrix3;
 import com.badlogic.gdx.math.Vector2;
 
-public interface IGraphNode extends ITreeNode,IObservable
+public interface IGraphNode extends ITreeNode
 {
 	public static final AtomicLong NODE_ID = new AtomicLong(0);
 
@@ -75,15 +75,14 @@ public interface IGraphNode extends ITreeNode,IObservable
 
 	public void rotate(float angleInDeg);
 
-	public void translate(EventType eventType,float dx, float dy);
-
-	public void rotate(EventType eventType,float angleInDeg);
-
 	public void set(float x,float y);
-
-	public void set(float x,float y , boolean notifyObservers);
 
 	public boolean contains(float x,float y);
 
 	public Rectangle2D.Float getBounds();
+
+	// handles
+	public IRotationHandle getRotationHandle(float viewX,float viewY,float pickRadius);
+
+	public ITranslationHandle getTranslationHandle(float viewX,float viewY,float pickRadius);
 }

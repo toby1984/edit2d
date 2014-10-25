@@ -40,6 +40,38 @@ public class PointNode extends AbstractGraphNode
 	}
 
 	@Override
+	public ITranslationHandle getTranslationHandle(float viewX, float viewY,float pickRadius)
+	{
+		if ( distanceTo(viewX,viewY) <= pickRadius )
+		{
+			return new ITranslationHandle() {
+
+				@Override
+				public void translate(float dx, float dy) {
+					PointNode.this.translate(dx,dy);
+				}
+
+				@Override
+				public float distanceTo(float viewX, float viewY) {
+					return PointNode.this.distanceTo(viewX,viewY);
+				}
+
+				@Override
+				public IGraphNode getNode() {
+					return PointNode.this;
+				}
+			};
+		}
+		return null;
+	}
+
+	@Override
+	public IRotationHandle getRotationHandle(float viewX, float viewY,float pickRadius)
+	{
+		return null;
+	}
+
+	@Override
 	public Vector2 getCenterInViewCoordinates() {
 		return new Vector2(p).mul( getParent().getCombinedMatrix() );
 	}
@@ -57,36 +89,6 @@ public class PointNode extends AbstractGraphNode
 	@Override
 	public List<IGraphNode> getChildren() {
 		return Collections.emptyList();
-	}
-
-	@Override
-	public void translate(EventType eventType, float dx, float dy)
-	{
-		final IGraphNode root = getRoot();
-		if ( ((RootNode) root).queueTranslate( eventType , this , dx , dy ) )
-		{
-			System.out.println("*** Translating point by "+dx+","+dy);
-			this.p.x += dx;
-			this.p.y += dy;
-		} else {
-			System.err.println("--- Not translating point,already moved");
-		}
-	}
-
-	@Override
-	public void set(float x, float y,boolean notifyObservers)
-	{
-		final Vector2 pv = getCenterInViewCoordinates();
-
-		final float dx = (x - pv.x);
-		final float dy = (y - pv.y);
-
-		if ( notifyObservers ) {
-			this.translate(EventType.TRANSLATED,dx,dy);
-		} else {
-			this.p.x += dx;
-			this.p.y += dy;
-		}
 	}
 
 	@Override

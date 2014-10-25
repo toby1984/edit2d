@@ -9,7 +9,6 @@ public abstract class AbstractGraphNode implements IGraphNode
 {
 	protected static final Matrix3 MAT_IDENTITY = new Matrix3();
 
-	protected final List<INodeObserver> observers = new ArrayList<>();
 	protected IGraphNode parent;
 
 	protected final long nodeId = NODE_ID.incrementAndGet();
@@ -45,11 +44,6 @@ public abstract class AbstractGraphNode implements IGraphNode
 	}
 
 	@Override
-	public final void addObserver(INodeObserver o) {
-		this.observers.add(o);
-	}
-
-	@Override
 	public final void visitPreOrder(INodeVisitor v) {
 		v.visit( this );
 		getChildren().forEach( node -> node.visitPreOrder( v ) );
@@ -76,23 +70,6 @@ public abstract class AbstractGraphNode implements IGraphNode
 	@Override
 	public final IGraphNode getRoot() {
 		return getParent() == null ? this : getParent().getRoot();
-	}
-
-	@Override
-	public final List<INodeObserver> getObservers() {
-		return observers;
-	}
-
-	@Override
-	public final void removeObserver(INodeObserver o) {
-		final int len = observers.size();
-		for ( int i = 0 ; i < len ; i++ ) {
-			if ( observers.get(i) == o )
-			{
-				observers.remove( i );
-				i--;
-			}
-		}
 	}
 
 	@Override
@@ -186,26 +163,6 @@ public abstract class AbstractGraphNode implements IGraphNode
 	}
 
 	@Override
-	public void translate(EventType eventType, float dx, float dy)
-	{
-		if ( ((RootNode) getRoot()).queueTranslate( eventType , this , dx , dy ) ) {
-			translate( dx ,  dy );
-		}
-	}
-
-	@Override
-	public void rotate(EventType eventType,float angleInDeg) {
-		if ( ((RootNode) getRoot()).queueRotate( eventType , this , angleInDeg ) ) {
-			rotate( angleInDeg );
-		}
-	}
-
-	@Override
-	public void set(float x, float y,boolean notifyObservers) {
-		throw new RuntimeException("Unsupported operation set(int,int,boolean)");
-	}
-
-	@Override
 	public void set(float x, float y) {
 		throw new UnsupportedOperationException("set(float,float) not supported on "+this);
 	}
@@ -213,5 +170,43 @@ public abstract class AbstractGraphNode implements IGraphNode
 	@Override
 	public void copyMetaDataFrom(IGraphNode other) {
 		this.flags = ((AbstractGraphNode) other).flags;
+	}
+
+	@Override
+	public IRotationHandle getRotationHandle(float viewX, float viewY,float pickRadius)
+	{
+		IRotationHandle result = null;
+		float distance = 0;
+		for ( final IGraphNode child : getChildren() )
+		{
+			final IRotationHandle handle = child.getRotationHandle( viewX , viewY, pickRadius);
+			if ( handle != null ) {
+				final float d = handle.distanceTo(viewX, viewY);
+				if ( result == null || d < distance ) {
+					result = handle;
+					distance = d;
+				}
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public ITranslationHandle getTranslationHandle(float viewX, float viewY,float pickRadius)
+	{
+		ITranslationHandle result = null;
+		float distance = 0;
+		for ( final IGraphNode child : getChildren() )
+		{
+			final ITranslationHandle handle = child.getTranslationHandle( viewX , viewY, pickRadius);
+			if ( handle != null ) {
+				final float d = handle.distanceTo(viewX, viewY);
+				if ( result == null || d < distance ) {
+					result = handle;
+					distance = d;
+				}
+			}
+		}
+		return result;
 	}
 }

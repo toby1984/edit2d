@@ -5,8 +5,6 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Rectangle2D.Float;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 
 import com.badlogic.gdx.math.Intersector;
@@ -47,12 +45,6 @@ public class LineNode extends AbstractGraphNode
 
 	public float length() {
 		return p0().dst(p1());
-	}
-
-	@Override
-	public void translate(EventType eventType, float dx, float dy)
-	{
-		children.forEach( node -> node.translate(eventType, dx, dy) );
 	}
 
 	@Override
@@ -103,7 +95,6 @@ public class LineNode extends AbstractGraphNode
 
 		final PointNode splitPoint1 = new PointNode( s );
 		final PointNode splitPoint2 = new PointNode( s );
-		Observers.link( new HashSet<>(Arrays.asList( EventType.PARENT_MOVED , EventType.TRANSLATED ) ) , splitPoint1 , splitPoint2 );
 
 		final PointNode end = (PointNode) child(1);
 		setChild( 1 , splitPoint1 );
@@ -131,6 +122,54 @@ public class LineNode extends AbstractGraphNode
 	@Override
 	public float distanceTo(float x, float y) {
 		return Intersector.distanceSegmentPoint(p0(), p1(), new Vector2(x,y) );
+	}
+
+
+	@Override
+	public ITranslationHandle getTranslationHandle(float viewX, float viewY,float pickRadius)
+	{
+		final float d1 = child(0).distanceTo(viewX, viewY);
+		final float d2 = child(1).distanceTo(viewX, viewY);
+
+		if ( d1 <= pickRadius && d2 <= pickRadius ) {
+			if ( d1 < d2 ) {
+				return child(0).getTranslationHandle(viewX, viewY, pickRadius);
+			}
+			return child(1).getTranslationHandle(viewX, viewY, pickRadius);
+		}
+		if ( d1 <= pickRadius )
+		{
+			return child(0).getTranslationHandle(viewX, viewY, pickRadius);
+		}
+		if ( d2 <= pickRadius ) {
+			return child(1).getTranslationHandle(viewX, viewY, pickRadius);
+		}
+
+		if ( distanceTo(viewX, viewY) <= pickRadius ) {
+			return new ITranslationHandle()
+			{
+				@Override
+				public void translate(float dx, float dy) {
+					LineNode.this.translate(dx,dy);
+				}
+
+				@Override
+				public float distanceTo(float viewX, float viewY) {
+					return LineNode.this.distanceTo( viewX,  viewY );
+				}
+
+				@Override
+				public IGraphNode getNode() { return LineNode.this; }
+
+			};
+		}
+		return null;
+	}
+
+	@Override
+	public IRotationHandle getRotationHandle(float viewX, float viewY,float pickRadius)
+	{
+		return null;
 	}
 
 	@Override

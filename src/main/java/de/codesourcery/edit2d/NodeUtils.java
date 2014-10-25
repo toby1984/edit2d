@@ -118,7 +118,6 @@ public class NodeUtils {
 			}
 			else
 			{
-				Observers.unlink( node );
 				node.remove();
 
 				if ( node.getParent().hasNoChildren() && !( node.getParent() instanceof RootNode) )

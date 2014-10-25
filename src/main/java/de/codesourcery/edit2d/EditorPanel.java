@@ -100,7 +100,7 @@ public class EditorPanel extends JPanel {
 
 	protected Vector2 rotationCenter;
 	protected final Point lastPos = new Point();
-	protected IGraphNode dragged = null;
+	protected IHandle dragged = null;
 
 	protected final class MyMouseAdapter extends MouseAdapter
 	{
@@ -113,18 +113,22 @@ public class EditorPanel extends JPanel {
 				{
 					if ( dragged == null && e.getButton() == MouseEvent.BUTTON1 )
 					{
-						IGraphNode candidate = NodeUtils.findClosestNode( rootNode,e.getX(), e.getY() , SELECTION_RADIUS );
-						if ( candidate == null || ! candidate.hasFlag(Flag.SELECTABLE) )
-						{
-							candidate = NodeUtils.findContainingNode( rootNode , e.getX() ,  e.getY() );
+						IHandle candidate;
+						if ( isEditMode( EditMode.MOVE ) ) {
+							candidate = rootNode.getTranslationHandle( e.getX() , e.getY() , SELECTION_RADIUS );
+						} else if ( isEditMode(EditMode.ROTATE ) ) {
+							candidate = rootNode.getRotationHandle( e.getX() , e.getY() , SELECTION_RADIUS );
+						} else {
+							throw new RuntimeException("Unreachable code reached");
 						}
-						if ( candidate != null && candidate.hasFlag(Flag.SELECTABLE) )
+
+						if ( candidate != null && candidate.getNode().hasFlag(Flag.SELECTABLE) )
 						{
-							if ( ! isEditMode( EditMode.ROTATE ) || (isEditMode( EditMode.ROTATE ) && candidate.hasFlag(Flag.CAN_ROTATE) ) )
+							if ( ! isEditMode( EditMode.ROTATE ) || (isEditMode( EditMode.ROTATE ) && candidate.getNode().hasFlag(Flag.CAN_ROTATE) ) )
 							{
 								if ( isEditMode( EditMode.ROTATE ) )
 								{
-									rotationCenter = new Vector2( candidate.getCenterInViewCoordinates() );
+									rotationCenter = new Vector2( candidate.getNode().getCenterInViewCoordinates() );
 								}
 								lastPos.setLocation( e.getPoint() );
 								dragged = candidate;
@@ -224,7 +228,6 @@ public class EditorPanel extends JPanel {
 						float dx = e.getX() - lastPos.x;
 						float dy = e.getY() - lastPos.y;
 
-						final EventType t = EventType.TRANSLATED;
 						if ( dragged instanceof LineNode )
 						{
 							final LineNode l = (LineNode) dragged;
@@ -242,17 +245,18 @@ public class EditorPanel extends JPanel {
 						Vector2 oldV = new Vector2(lastPos.x,lastPos.y);
 						Vector2 newV = new Vector2(e.getX(),e.getY());
 
-						oldV = dragged.viewToModel( oldV );
-						newV = dragged.viewToModel( newV );
+						oldV = dragged.getNode().viewToModel( oldV );
+						newV = dragged.getNode().viewToModel( newV );
 
 						dx= newV.x - oldV.x;
 						dy= newV.y - oldV.y;
-						dragged.translate( t , dx, dy );
+
+						((ITranslationHandle) dragged).translate( dx, dy );
 					}
 
 					lastPos.setLocation( e.getPoint() );
 					if ( dragged != null ) {
-						subtreeValuesChanged(dragged);
+						subtreeValuesChanged(dragged.getNode());
 					}
 					repaint();
 				}
@@ -263,7 +267,7 @@ public class EditorPanel extends JPanel {
 						final float lastAngle = angleInDeg( rotationCenter , new Vector2(lastPos.x,lastPos.y) );
 						final float newAngle = angleInDeg( rotationCenter , new Vector2( e.getX() , e.getY() ) );
 						final float delta = lastAngle - newAngle;
-						dragged.rotate( EventType.ROTATED , delta );
+						((IRotationHandle) dragged).rotate( delta );
 						System.out.println("Angle: "+newAngle);
 						lastPos.setLocation( e.getPoint() );
 						repaint();
@@ -349,8 +353,6 @@ public class EditorPanel extends JPanel {
 			}
 
 			graphics.setColor(Color.GREEN);
-
-			rootNode.processNodeUpdates();
 
 			rootNode.update();
 
