@@ -16,7 +16,12 @@ public class PointNode extends AbstractGraphNode
 
 		@Override
 		public Vector2 viewToModel(Vector2 v) {
-			return new Vector2(v);
+			return getParent().getMetaData().viewToModel( v );
+		}
+
+		@Override
+		public Vector2 modelToView(Vector2 v) {
+			return getParent().getMetaData().modelToView( v );
 		}
 	};
 

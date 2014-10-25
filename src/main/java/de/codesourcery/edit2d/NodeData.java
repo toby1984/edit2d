@@ -40,7 +40,8 @@ public class NodeData extends LightweightNodeData {
 	}
 
 	@Override
-	public void translate(float dx,float dy) {
+	public void translate(float dx,float dy)
+	{
 		this.dx += dx;
 		this.dy += dy;
 		updateModelMatrix();

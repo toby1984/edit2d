@@ -219,8 +219,8 @@ public class EditorPanel extends JPanel {
 				{
 					if ( dragged != null )
 					{
-						int dx = e.getX() - lastPos.x;
-						int dy = e.getY() - lastPos.y;
+						float dx = e.getX() - lastPos.x;
+						float dy = e.getY() - lastPos.y;
 
 						final EventType t = EventType.TRANSLATED;
 						if ( dragged instanceof LineNode )
@@ -236,8 +236,18 @@ public class EditorPanel extends JPanel {
 						System.err.flush();
 						System.err.println("--------- Mouse dragged , translating "+dx+","+dy);
 						System.err.flush();
+
+						Vector2 oldV = new Vector2(lastPos.x,lastPos.y);
+						Vector2 newV = new Vector2(e.getX(),e.getY());
+
+						oldV = dragged.getMetaData().viewToModel( oldV );
+						newV = dragged.getMetaData().viewToModel( newV );
+
+						dx= newV.x - oldV.x;
+						dy= newV.y - oldV.y;
 						dragged.translate( t , dx, dy );
 					}
+
 					lastPos.setLocation( e.getPoint() );
 					if ( dragged != null ) {
 						subtreeValuesChanged(dragged);
@@ -332,8 +342,8 @@ public class EditorPanel extends JPanel {
 		{
 			if ( pointOnLine != null ) {
 				g.setColor(Color.RED);
-				g.drawLine( 0 , (int) pointOnLine.y , getWidth() , (int) pointOnLine.y );
-				g.drawLine( (int) pointOnLine.x , 0 , (int) pointOnLine.x, getHeight() );
+				g.drawLine( 0 , round( pointOnLine.y ) , getWidth() , round( pointOnLine.y ) );
+				g.drawLine( round( pointOnLine.x ) , 0 , round( pointOnLine.x ), getHeight() );
 			}
 
 			graphics.setColor(Color.GREEN);
@@ -366,7 +376,7 @@ public class EditorPanel extends JPanel {
 			if ( isEditMode( EditMode.ROTATE) && dragged != null ) {
 
 				graphics.setColor(Color.RED);
-				graphics.drawLine( (int) rotationCenter.x , (int) rotationCenter.y , lastPos.x , lastPos.y );
+				graphics.drawLine( round( rotationCenter.x ) , round( rotationCenter.y ) , lastPos.x , lastPos.y );
 			}
 		}
 	}
@@ -383,7 +393,7 @@ public class EditorPanel extends JPanel {
 			} else {
 				graphics.setColor( REGULAR_COLOR );
 			}
-			graphics.drawLine( (int) p0.x , (int) p0.y , (int) p1.x , (int) p1.y );
+			graphics.drawLine( round( p0.x ) , round( p0.y ) , round( p1.x ) , round( p1.y ) );
 		}
 		else if ( t instanceof PointNode  )
 		{
@@ -393,8 +403,12 @@ public class EditorPanel extends JPanel {
 			} else {
 				graphics.setColor( EditorPanel.POINT_COLOR );
 			}
-			graphics.drawOval( (int) (p.x - 3) , (int) (p.y - 3 ) , 7 , 7 );
+			graphics.drawOval( round(p.x - 3) , round(p.y - 3 ) , 7 , 7 );
 		}
+	}
+
+	protected static int round(double value) {
+		return (int) Math.round(value);
 	}
 
 	public void highlight(IGraphNode n) {
