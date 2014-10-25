@@ -44,15 +44,6 @@ public abstract class AbstractGraphNode implements IGraphNode
 		return this;
 	}
 
-	protected final boolean isSet(Flag flag) {
-		return flag.isSet( this.flags );
-	}
-
-	@Override
-	public final boolean requiresUpdate() {
-		return hasFlag(Flag.DIRTY);
-	}
-
 	@Override
 	public final void addObserver(INodeObserver o) {
 		this.observers.add(o);
@@ -172,7 +163,7 @@ public abstract class AbstractGraphNode implements IGraphNode
 	@Override
 	public void update()
 	{
-		if ( requiresUpdate() )
+		if ( hasFlag(Flag.DIRTY) )
 		{
 			update( getParent().getCombinedMatrix() );
 		} else {
@@ -180,6 +171,17 @@ public abstract class AbstractGraphNode implements IGraphNode
 			{
 				child.update();
 			}
+		}
+	}
+
+	@Override
+	public void update(Matrix3 matrix)
+	{
+		System.out.println("update(): Called on "+this+" with "+NodeUtils.matrixToString(matrix));
+		updateCombinedMatrix( matrix );
+		for ( final IGraphNode child : getChildren() )
+		{
+			child.update( getCombinedMatrix() );
 		}
 	}
 
@@ -206,17 +208,6 @@ public abstract class AbstractGraphNode implements IGraphNode
 	@Override
 	public void set(float x, float y) {
 		throw new UnsupportedOperationException("set(float,float) not supported on "+this);
-	}
-
-	@Override
-	public void update(Matrix3 matrix)
-	{
-		System.out.println("update(): Called on "+this+" with "+NodeUtils.matrixToString(matrix));
-		updateCombinedMatrix( matrix );
-		for ( final IGraphNode child : getChildren() )
-		{
-			child.update( getCombinedMatrix() );
-		}
 	}
 
 	@Override

@@ -62,8 +62,6 @@ public interface IGraphNode extends ITreeNode,IObservable
 	// metadata functions
 	public void update();
 
-	public boolean requiresUpdate();
-
 	public void update(Matrix3 matrix);
 
 	public void copyMetaDataFrom(IGraphNode other);
