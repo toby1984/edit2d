@@ -101,6 +101,8 @@ public class EditorPanel extends JPanel {
 	protected Vector2 rotationCenter;
 	protected final Point lastPos = new Point();
 	protected IHandle dragged = null;
+	protected ConnectedLineSegments currentLineSegments = null;
+	protected Vector2 lineSegmentEndPoint= null;
 
 	protected final class MyMouseAdapter extends MouseAdapter
 	{
@@ -148,7 +150,27 @@ public class EditorPanel extends JPanel {
 		@Override
 		public void mouseClicked(MouseEvent e)
 		{
-			if ( getEditMode() == EditMode.CREATE_POINTS && e.getButton() == MouseEvent.BUTTON1 )
+			if ( isEditMode( EditMode.DRAW )  ) {
+
+				if ( currentLineSegments == null )
+				{
+					Vector2 modelCoords = rootNode.viewToModel( new Vector2(e.getX(),e.getY() ) );
+
+					final PointNode p0 = new PointNode( modelCoords.x , modelCoords.y );
+					final PointNode p1 = new PointNode( modelCoords.x , modelCoords.y );
+
+					final LineNode line = new LineNode( p0 , p1 );
+
+					final ConnectedLineSegments segment = new ConnectedLineSegments( line );
+					currentLineSegments = segment;
+					rootNode.addChildren( segment );
+				}
+				else
+				{
+
+				}
+			}
+			else if ( isEditMode( EditMode.CREATE_POINTS ) && e.getButton() == MouseEvent.BUTTON1 )
 			{
 				synchronized(modelLock)
 				{
@@ -332,6 +354,8 @@ public class EditorPanel extends JPanel {
 			throw new IllegalArgumentException("editMode must not be NULL");
 		}
 		dragged = null;
+		currentLineSegments = null;
+		lineSegmentEndPoint = null;
 		rotationCenter = null;
 		this.editModeOverride = null;
 		this.currentEditingMode = editMode;
